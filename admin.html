@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Admin dashboard untuk mengelola event rapat.">
+<title>Admin — Verdant Schedule</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍃</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+:root{--bg:#f9f6f0;--surface:#fffef9;--border:#e0d8c8;--border-2:#cfc5b0;--green:#6b8f5e;--green-dark:#3b5a30;--green-pale:#eef3e8;--text:#4a4030;--muted:#8a7a5a;--accent:#c8a96e;--red:#b5544e;--red-pale:#faf0ee;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6;min-height:100vh;}
+/* Toast */
+.toast-wrap{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 20px;font-size:13px;color:var(--text);box-shadow:0 4px 20px rgba(0,0,0,.08);display:flex;align-items:center;gap:8px;animation:tIn .3s ease;min-width:220px;}
+.toast.ok{border-left:3px solid var(--green);}.toast.err{border-left:3px solid var(--red);}
+.toast.hide{animation:tOut .3s ease forwards;}
+@keyframes tIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes tOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(40px)}}
+/* Loading */
+.loading{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px;}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Shared */
+.input{font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);outline:none;transition:border-color .15s;width:100%;}
+.input:focus{border-color:var(--green);}
+.input::placeholder{color:var(--muted);}
+.select{font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);outline:none;width:100%;appearance:none;cursor:pointer;}
+.btn{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:9px 18px;border-radius:8px;cursor:pointer;transition:all .15s;border:none;}
+.btn-p{background:var(--green);color:#fff;}.btn-p:hover{background:var(--green-dark);}.btn-p:disabled{opacity:.5;cursor:not-allowed;}
+.btn-o{background:transparent;color:var(--green-dark);border:1px solid var(--border-2);}.btn-o:hover{background:var(--green-pale);}
+.btn-r{background:transparent;color:var(--red);border:1px solid var(--red);font-size:12px;}.btn-r:hover{background:var(--red-pale);}
+.btn-g{background:transparent;color:var(--muted);border:1px solid transparent;}.btn-g:hover{background:var(--green-pale);color:var(--text);}
+.btn-a{background:var(--green-dark);color:#fff;font-size:11px;padding:8px;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;transition:all .15s;}.btn-a:hover{opacity:.85;}
+/* Confirm Dialog */
+.confirm-overlay{position:fixed;inset:0;background:rgba(74,64,48,.3);display:flex;align-items:center;justify-content:center;z-index:9998;animation:fadeIn .15s ease;}
+.confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.12);}
+.confirm-msg{font-size:14px;margin-bottom:20px;color:var(--text);line-height:1.5;}
+.confirm-actions{display:flex;gap:8px;}
+.confirm-actions .btn{flex:1;}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:10px 18px;border-radius:8px;cursor:pointer;transition:all .15s;}
+.btn-ghost:hover{background:var(--green-pale);color:var(--text);}
+.btn-danger{background:var(--red);color:#fff;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:10px 18px;border-radius:8px;cursor:pointer;transition:all .15s;}
+.btn-danger:hover{background:#9a3a35;}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(74,64,48,.3);display:flex;align-items:center;justify-content:center;z-index:9998;animation:fadeIn .15s ease;}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;max-width:400px;width:90%;box-shadow:0 8px 30px rgba(0,0,0,.12);}
+.modal-title{font-size:16px;font-weight:500;margin-bottom:16px;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.card-h{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.card-t{font-size:13px;font-weight:500;}
+.card-b{padding:18px;}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;}
+.badge-g{background:var(--green-pale);color:var(--green-dark);}
+/* Login */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:40px 32px;width:100%;max-width:380px;text-align:center;}
+.login-title{font-size:20px;font-weight:500;margin-bottom:24px;color:var(--text);}
+.login-badge{font-size:10px;font-weight:500;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;font-family:'DM Mono',monospace;}
+.err-box{background:var(--red-pale);border:1px solid var(--red);border-radius:8px;padding:10px;font-size:12px;color:var(--red);margin-top:12px;}
+/* Dashboard */
+.dash{max-width:1000px;margin:0 auto;padding:28px 24px;}
+.dash-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+.dash-title{font-size:20px;font-weight:500;}
+.event-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+.event-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;display:flex;flex-direction:column;justify-content:space-between;min-height:200px;cursor:pointer;transition:all .15s;}
+.event-card:hover{border-color:var(--green);box-shadow:0 4px 16px rgba(107,143,94,.1);}
+.event-name{font-size:18px;font-weight:500;margin-bottom:8px;word-break:break-word;}
+.event-meta{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;padding-left:10px;border-left:2px solid var(--green);margin-bottom:auto;}
+.event-actions{display:flex;flex-direction:column;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);}
+.event-actions-row{display:flex;gap:8px;}
+.event-actions-row .btn{flex:1;font-size:11px;padding:8px;text-align:center;}
+.new-card{background:var(--surface);border:2px dashed var(--border);border-radius:10px;padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:200px;cursor:pointer;transition:all .15s;gap:12px;}
+.new-card:hover{border-color:var(--green);background:var(--green-pale);}
+.new-icon{width:40px;height:40px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;}
+/* Editor */
+.editor{max-width:900px;margin:0 auto;padding:28px 24px;}
+.back-btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--green-dark);cursor:pointer;margin-bottom:20px;background:none;border:none;font-family:'DM Sans',sans-serif;}
+.back-btn:hover{color:var(--green);}
+.editor-grid{display:grid;grid-template-columns:1fr 300px;gap:20px;}
+.form-group{margin-bottom:16px;}
+.form-label{font-size:12px;font-weight:500;color:var(--text);margin-bottom:6px;display:block;}
+.form-row{display:flex;gap:12px;}
+.form-row>*{flex:1;}
+/* Calendar */
+.cal{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px;user-select:none;}
+.cal-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--green-dark);color:#fff;}
+.cal-nav{background:none;border:none;color:#fff;font-size:18px;font-weight:700;cursor:pointer;padding:2px 8px;}
+.cal-month{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:10px;font-weight:500;color:var(--muted);background:var(--green-pale);border-bottom:1px solid var(--border);}
+.cal-days div{padding:8px 4px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);background:var(--surface);}
+.cal-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;transition:all .1s;border:1px solid transparent;}
+.cal-cell:hover{background:var(--green-pale);}
+.cal-cell.sel{background:var(--green);color:#fff;border-radius:4px;}
+.cal-cell.empty{cursor:default;background:var(--bg);}
+.cal-footer{padding:8px;text-align:center;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;background:var(--bg);border-top:1px solid var(--border);}
+/* Participants */
+.part-panel{display:flex;flex-direction:column;height:500px;}
+.part-header{padding:14px 18px;border-bottom:1px solid var(--border);background:var(--green-pale);}
+.part-title{font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px;}
+.part-count{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px;}
+.part-list{flex:1;overflow-y:auto;padding:8px;}
+.part-item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;transition:background .1s;}
+.part-item:hover{background:var(--red-pale);}
+.part-name{font-size:13px;font-weight:500;}
+.part-slots{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}
+.part-del{background:var(--red);color:#fff;border:none;border-radius:6px;padding:6px 8px;cursor:pointer;transition:all .15s;font-size:12px;}
+.part-del:hover{background:#9a3a35;}
+.part-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:12px;font-family:'DM Mono',monospace;}
+@media(max-width:767px){.editor-grid{grid-template-columns:1fr;}.event-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, getDoc, collection, addDoc, updateDoc, deleteDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+const firebaseConfig={apiKey:"AIzaSyDHHweUfTvf66TY0fX5BaEWrIv_dhbDUlA",authDomain:"rapat-6f578.firebaseapp.com",projectId:"rapat-6f578",storageBucket:"rapat-6f578.firebasestorage.app",messagingSenderId:"650812218372",appId:"1:650812218372:web:c537c74c1d9a678fbda951"};
+const app=initializeApp(firebaseConfig);const db=getFirestore(app);
+
+async function hashPwd(pwd){const enc=new TextEncoder();const buf=await crypto.subtle.digest('SHA-256',enc.encode(pwd));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
+
+function useToast(){const[toasts,setToasts]=React.useState([]);
+const show=(msg,type='ok')=>{const id=Date.now();setToasts(p=>[...p,{id,msg,type,hide:false}]);setTimeout(()=>setToasts(p=>p.map(t=>t.id===id?{...t,hide:true}:t)),2500);setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),2800);};
+return{toasts,show};}
+
+function ConfirmDialog({message,onConfirm,onCancel}){return(<div className="confirm-overlay" onClick={onCancel}><div className="confirm-box" onClick={e=>e.stopPropagation()}><div className="confirm-msg">{message}</div><div className="confirm-actions"><button className="btn-ghost" onClick={onCancel}>Batal</button><button className="btn-danger" onClick={onConfirm}>Hapus</button></div></div></div>);}
+
+function CreateModal({onSubmit,onCancel}){const[val,setVal]=React.useState('');const handleSubmit=(e)=>{e.preventDefault();if(val.trim())onSubmit(val.trim());};return(<div className="modal-overlay" onClick={onCancel}><div className="modal-box" onClick={e=>e.stopPropagation()}><div className="modal-title">Buat Rapat Baru</div><form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:'12px'}}><input className="input" placeholder="Nama rapat..." value={val} onChange={e=>setVal(e.target.value)} autoFocus required/><div style={{display:'flex',gap:'8px'}}><button type="button" className="btn-ghost" onClick={onCancel} style={{flex:1}}>Batal</button><button type="submit" className="btn btn-p" style={{flex:1}}>Buat</button></div></form></div></div>);}
+function Toasts({toasts}){return(<div className="toast-wrap">{toasts.map(t=><div key={t.id} className={`toast ${t.type} ${t.hide?'hide':''}`}><span>{t.type==='ok'?'✓':'!'}</span><span>{t.msg}</span></div>)}</div>);}
+
+function LoginForm({onLogin,toast}){
+const[u,setU]=React.useState('');const[p,setP]=React.useState('');const[err,setErr]=React.useState('');const[load,setLoad]=React.useState(false);
+const sub=async(e)=>{e.preventDefault();setLoad(true);setErr('');
+try{const snap=await getDoc(doc(db,'system_config','admin_creds'));if(!snap.exists())throw new Error("Database belum disetup oleh Superadmin.");
+const users=snap.data().users||[];const hashedP=await hashPwd(p);
+const found=users.find(x=>x.u.toLowerCase()===u.toLowerCase()&&(x.p===hashedP||x.p===p));
+if(found){toast.show('Login berhasil!','ok');setTimeout(()=>onLogin(),300);}else setErr('Username/Password Salah!');}catch(e){setErr(e.message);}setLoad(false);};
+return(<div className="login-wrap"><div className="login-card"><div className="login-badge">Admin Panel</div><div className="login-title">Verdant Schedule</div>
+<form onSubmit={sub} style={{display:'flex',flexDirection:'column',gap:'10px'}}><input className="input" placeholder="Username" value={u} onChange={e=>setU(e.target.value)} required style={{textAlign:'center'}}/>
+<input type="password" className="input" placeholder="Password" value={p} onChange={e=>setP(e.target.value)} required style={{textAlign:'center'}}/>
+<button disabled={load} className="btn btn-p" style={{width:'100%',padding:'12px'}}>{load?'Memverifikasi...':'Masuk'}</button></form>
+{err&&<div className="err-box">{err}</div>}</div></div>);}
+
+function Dashboard({onSelectEvent,onLogout,toast}){
+const[events,setEvents]=React.useState([]);const[loading,setLoading]=React.useState(true);
+const[showCreate,setShowCreate]=React.useState(false);
+const[confirmDel,setConfirmDel]=React.useState(null);
+React.useEffect(()=>{fetchEvents();},[]);
+const fetchEvents=async()=>{try{const snap=await getDocs(collection(db,'events'));const list=snap.docs.map(d=>({id:d.id,...d.data()}));list.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));setEvents(list);}catch(e){console.error(e);}setLoading(false);};
+const createEvent=async(name)=>{setShowCreate(false);try{const ref=await addDoc(collection(db,'events'),{eventName:name,days:[],rawDates:[],startHour:8,endHour:17,createdAt:serverTimestamp()});toast.show('Rapat berhasil dibuat!','ok');onSelectEvent(ref.id);}catch(e){toast.show(e.message,'err');};};
+const deleteEvent=async(id)=>{await deleteDoc(doc(db,'events',id));setConfirmDel(null);toast.show('Rapat dihapus.','ok');fetchEvents();};
+const copyInviteLink=(e,id)=>{e.stopPropagation();const base=window.location.href.substring(0,window.location.href.lastIndexOf('/'));navigator.clipboard.writeText(`${base}/index.html?id=${id}`).then(()=>toast.show('Link undangan tersalin!','ok'));};  
+const goAnalysis=(e,id)=>{e.stopPropagation();window.location.href=`analysis.html?id=${id}`;};
+if(loading)return<div className="loading"><div className="spinner"></div><div style={{fontSize:'13px',color:'var(--muted)',fontFamily:"'DM Mono',monospace"}}>Memuat dashboard...</div></div>;
+return(<div className="dash">{showCreate&&<CreateModal onSubmit={createEvent} onCancel={()=>setShowCreate(false)}/>}
+{confirmDel&&<ConfirmDialog message={`Hapus rapat "${confirmDel.name}" secara permanen?`} onConfirm={()=>deleteEvent(confirmDel.id)} onCancel={()=>setConfirmDel(null)}/>}
+<div className="dash-header"><div className="dash-title">Daftar Rapat</div><button onClick={onLogout} className="btn btn-g" style={{fontSize:'12px'}}>Logout</button></div>
+<div className="event-grid"><div className="new-card" onClick={()=>setShowCreate(true)}><div className="new-icon">+</div><span style={{fontSize:'12px',fontWeight:500,color:'var(--muted)',letterSpacing:'.04em'}}>Buat Baru</span></div>
+{events.map(ev=>(<div key={ev.id} className="event-card" onClick={()=>onSelectEvent(ev.id)}>
+<div><div className="event-name">{ev.eventName}</div><div className="event-meta">{ev.rawDates?.length||0} hari terpilih<br/>Jam {ev.startHour}:00 — {ev.endHour}:00</div></div>
+<div className="event-actions"><div className="event-actions-row"><button onClick={e=>copyInviteLink(e,ev.id)} className="btn btn-o"><i data-lucide="link" style={{width:'13px',height:'13px',marginRight:'4px'}}></i>Salin Undangan</button><button onClick={e=>{e.stopPropagation();setConfirmDel({id:ev.id,name:ev.eventName});}} className="btn btn-r"><i data-lucide="trash-2" style={{width:'13px',height:'13px',marginRight:'4px'}}></i>Hapus</button></div>
+<button onClick={e=>goAnalysis(e,ev.id)} className="btn btn-a" style={{width:'100%'}}><i data-lucide="bar-chart-3" style={{width:'13px',height:'13px',marginRight:'4px'}}></i>Lihat Hasil Analisis</button></div></div>))}</div></div>);}
+
+function EventEditor({eventId,onBack,toast}){
+const[data,setData]=React.useState(null);const[participants,setParticipants]=React.useState([]);const[selectedDates,setSelectedDates]=React.useState(new Set());
+const[viewDate,setViewDate]=React.useState(new Date());const[loading,setLoading]=React.useState(false);const[isDragging,setIsDragging]=React.useState(false);const[dragMode,setDragMode]=React.useState(true);
+React.useEffect(()=>{const load=async()=>{const snap=await getDoc(doc(db,'events',eventId));if(snap.exists()){const d=snap.data();setData(d);if(d.rawDates)setSelectedDates(new Set(d.rawDates));}else{toast.show('Event tidak ditemukan!','err');onBack();}
+try{const pSnap=await getDocs(collection(db,'events',eventId,'participants'));setParticipants(pSnap.docs.map(doc=>({id:doc.id,...doc.data()})));}catch(e){console.error(e);}};load();},[eventId]);
+
+const[confirmDelPart,setConfirmDelPart]=React.useState(null);
+const deleteParticipant=async(pid,name)=>{try{await deleteDoc(doc(db,'events',eventId,'participants',pid));setParticipants(p=>p.filter(x=>x.id!==pid));setConfirmDelPart(null);toast.show(`${name} dihapus.`,'ok');}catch(e){toast.show('Gagal: '+e.message,'err');}};
+const getDaysInMonth=(date)=>{const y=date.getFullYear(),m=date.getMonth(),dim=new Date(y,m+1,0).getDate(),fd=new Date(y,m,1).getDay(),days=[];
+for(let i=0;i<fd;i++)days.push(null);for(let i=1;i<=dim;i++)days.push({d:i,iso:`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`});return days;};
+const handleMouse=(iso,type)=>{if(!iso)return;if(type==='down'){setIsDragging(true);const w=!selectedDates.has(iso);setDragMode(w);updateSet(iso,w);}else if(type==='enter'&&isDragging){updateSet(iso,dragMode);}};
+const updateSet=(iso,add)=>{const n=new Set(selectedDates);if(add)n.add(iso);else n.delete(iso);setSelectedDates(n);};
+const save=async()=>{setLoading(true);const rawList=Array.from(selectedDates).sort();const daysF=rawList.map(iso=>{const d=new Date(iso);return`${['MIN','SEN','SEL','RAB','KAM','JUM','SAB'][d.getDay()]}, ${d.getDate()}/${d.getMonth()+1}`;});
+try{await updateDoc(doc(db,'events',eventId),{eventName:data.eventName,startHour:parseInt(data.startHour),endHour:parseInt(data.endHour),rawDates:rawList,days:daysF,updatedAt:serverTimestamp()});toast.show('Pengaturan disimpan!','ok');}catch(e){toast.show(e.message,'err');}setLoading(false);};
+
+if(!data)return<div className="loading"><div className="spinner"></div></div>;
+const calDays=getDaysInMonth(viewDate);const monthName=viewDate.toLocaleString('id-ID',{month:'long',year:'numeric'});
+return(<div className="editor" onMouseUp={()=>setIsDragging(false)}>
+<button className="back-btn" onClick={onBack}>← Kembali</button>
+<div className="editor-grid"><div>
+<div className="card" style={{marginBottom:'20px'}}><div className="card-h"><span className="card-t">Pengaturan Rapat</span></div><div className="card-b">
+<div className="form-group"><label className="form-label">Nama Rapat</label><input className="input" value={data.eventName} onChange={e=>setData({...data,eventName:e.target.value})}/></div>
+<div className="form-row"><div className="form-group"><label className="form-label">Mulai (Jam)</label><select className="select" value={data.startHour} onChange={e=>setData({...data,startHour:e.target.value})}>{[...Array(24).keys()].map(h=><option key={h} value={h}>{h}:00</option>)}</select></div>
+<div className="form-group"><label className="form-label">Selesai (Jam)</label><select className="select" value={data.endHour} onChange={e=>setData({...data,endHour:e.target.value})}>{[...Array(24).keys()].map(h=><option key={h} value={h}>{h}:00</option>)}</select></div></div>
+<div className="cal"><div className="cal-header"><button className="cal-nav" onClick={()=>{const d=new Date(viewDate);d.setMonth(d.getMonth()-1);setViewDate(d);}}>‹</button><span className="cal-month">{monthName}</span><button className="cal-nav" onClick={()=>{const d=new Date(viewDate);d.setMonth(d.getMonth()+1);setViewDate(d);}}>›</button></div>
+<div className="cal-days"><div>MIN</div><div>SEN</div><div>SEL</div><div>RAB</div><div>KAM</div><div>JUM</div><div>SAB</div></div>
+<div className="cal-grid">{calDays.map((d,i)=>{if(!d)return<div key={i} className="cal-cell empty"></div>;const isSel=selectedDates.has(d.iso);return(<div key={i} onMouseDown={()=>handleMouse(d.iso,'down')} onMouseEnter={()=>handleMouse(d.iso,'enter')} className={`cal-cell ${isSel?'sel':''}`}>{d.d}</div>);})}</div>
+<div className="cal-footer">{selectedDates.size} hari dipilih</div></div>
+<button onClick={save} disabled={loading} className="btn btn-p" style={{width:'100%',padding:'12px',fontSize:'14px'}}>{loading?'Menyimpan...':'Simpan Perubahan'}</button>
+</div></div></div>
+{confirmDelPart&&<ConfirmDialog message={`Hapus peserta "${confirmDelPart.name}"?`} onConfirm={()=>deleteParticipant(confirmDelPart.id,confirmDelPart.name)} onCancel={()=>setConfirmDelPart(null)}/>}
+<div className="card part-panel"><div className="part-header"><div className="part-title"><i data-lucide="users" style={{width:'16px',height:'16px'}}></i> Peserta</div><div className="part-count">{participants.length} orang</div></div>
+<div className="part-list">{participants.length===0?<div className="part-empty">Belum ada yang mengisi</div>:participants.map(p=>(<div key={p.id} className="part-item">
+<div><div className="part-name">{p.name||'Tanpa Nama'}</div><div className="part-slots">{p.slots?`${p.slots.length} slot`:'0 slot'}</div></div>
+<button className="part-del" onClick={()=>setConfirmDelPart({id:p.id,name:p.name||'Tanpa Nama'})}><i data-lucide="trash-2" style={{width:'14px',height:'14px'}}></i></button></div>))}</div></div>
+</div></div>);}
+
+function App(){
+const[isAuth,setIsAuth]=React.useState(localStorage.getItem('admin_logged')==='true');const[curEv,setCurEv]=React.useState(null);const toast=useToast();
+React.useEffect(()=>{if(window.lucide)lucide.createIcons();});
+const login=()=>{localStorage.setItem('admin_logged','true');setIsAuth(true);};const logout=()=>{localStorage.removeItem('admin_logged');setIsAuth(false);setCurEv(null);};
+return(<><Toasts toasts={toast.toasts}/>
+{!isAuth?<LoginForm onLogin={login} toast={toast}/>:curEv?<EventEditor eventId={curEv} onBack={()=>setCurEv(null)} toast={toast}/>:<Dashboard onSelectEvent={setCurEv} onLogout={logout} toast={toast}/>}</>);}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

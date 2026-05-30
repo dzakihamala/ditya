@@ -13,9 +13,8 @@ import {
   getMonthGrid,
   toggleDate,
   selectDateRange,
-  floatToTimeStr,
-  timeStrToFloat,
 } from "@/lib/date-utils";
+import { useToast } from "@/lib/use-toast";
 
 const MONTHS = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -53,7 +52,11 @@ function Calendar({
     if (!dragging) return;
     const handleUp = () => {
       if (dragStart && dragEnd) {
-        onChange(selectDateRange(selected, dragStart, dragEnd));
+        if (dragStart === dragEnd) {
+          onChange(toggleDate(selected, dragStart));
+        } else {
+          onChange(selectDateRange(selected, dragStart, dragEnd));
+        }
       }
       setDragStart(null);
       setDragEnd(null);
@@ -61,10 +64,6 @@ function Calendar({
     window.addEventListener("mouseup", handleUp);
     return () => window.removeEventListener("mouseup", handleUp);
   }, [dragging, dragStart, dragEnd, selected, onChange]);
-
-  const handleClick = (date: string) => {
-    onChange(toggleDate(selected, date));
-  };
 
   const inDragRange = (date: string): boolean => {
     if (!dragStart || !dragEnd) return false;
@@ -129,7 +128,6 @@ function Calendar({
                 handleMouseDown(date);
               }}
               onMouseEnter={() => handleMouseEnter(date)}
-              onClick={() => handleClick(date)}
             >
               {parseInt(date.slice(-2), 10)}
             </button>
@@ -197,6 +195,7 @@ function EditorContent() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const { toast, showToast } = useToast();
 
   useEffect(() => {
     if (!meetingId) {
@@ -254,7 +253,9 @@ function EditorContent() {
 
   const copyLink = () => {
     if (!broadcastLink) return;
-    navigator.clipboard.writeText(broadcastLink).catch(() => {});
+    navigator.clipboard.writeText(broadcastLink).then(() => {
+      showToast("Link undangan tersalin!");
+    }).catch(() => {});
   };
 
   if (!loaded) {
@@ -285,92 +286,98 @@ function EditorContent() {
       </div>
 
       <div className="editor-card">
-        <label className="form-label">Nama Rapat</label>
-        <input
-          className="input"
-          type="text"
-          placeholder="Misal: Rapat Koordinasi Tim"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+        <div className="editor-cols">
+          <div className="editor-col-left">
+            <label className="form-label">Nama Rapat</label>
+            <input
+              className="input"
+              type="text"
+              placeholder="Misal: Rapat Koordinasi Tim"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
 
-        <hr className="divider" />
-
-        <label className="form-label">
-          Tanggal Kandidat ({dates.length} dipilih)
-        </label>
-        <Calendar selected={dates} onChange={setDates} />
-
-        {dates.length > 0 && (
-          <div className="selected-dates">
-            {dates.map((d) => (
-              <span key={d} className="date-chip">
-                {d.split("-").reverse().join("/")}
-                <button
-                  className="date-chip-x"
-                  onClick={() =>
-                    setDates((prev) => prev.filter((x) => x !== d))
-                  }
-                  type="button"
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-
-        <hr className="divider" />
-
-        <label className="form-label">Rentang Jam</label>
-        <div className="time-range">
-          <TimePicker
-            label="Mulai"
-            value={startHour}
-            onChange={(newStart) => {
-              setStartHour(newStart);
-              if (newStart >= endHour) setEndHour(Math.min(newStart + 0.5, 23.98));
-            }}
-          />
-          <span className="time-range-dash">—</span>
-          <TimePicker
-            label="Selesai"
-            value={endHour}
-            onChange={(newEnd) => {
-              if (newEnd > startHour) setEndHour(newEnd);
-            }}
-          />
-        </div>
-        <p className="time-hint">
-          {floatToTimeStr(startHour)} – {floatToTimeStr(endHour)} (
-          {Math.round((endHour - startHour) * 60)} menit)
-        </p>
-
-        <hr className="divider" />
-
-        {broadcastLink && (
-          <>
-            <label className="form-label">Link Undangan</label>
-            <div className="broadcast-row">
-              <code className="broadcast-link">{broadcastLink}</code>
-              <button className="btn btn-p" onClick={copyLink} style={{ fontSize: 12 }}>
-                Salin
-              </button>
-            </div>
             <hr className="divider" />
-          </>
-        )}
 
-        {error && <div className="err-box">{error}</div>}
-        <button
-          className="btn btn-p"
-          style={{ width: "100%", padding: 12, marginTop: error ? 12 : 0 }}
-          disabled={!valid || saving}
-          onClick={handleSave}
-        >
-          {saving ? "Menyimpan..." : isNew ? "Buat Rapat" : "Simpan Perubahan"}
-        </button>
+            <label className="form-label">
+              Tanggal Kandidat ({dates.length} dipilih)
+            </label>
+            <Calendar selected={dates} onChange={setDates} />
+
+            {dates.length > 0 && (
+              <div className="selected-dates">
+                {dates.map((d) => (
+                  <span key={d} className="date-chip">
+                    {d.split("-").reverse().join("/")}
+                    <button
+                      className="date-chip-x"
+                      onClick={() =>
+                        setDates((prev) => prev.filter((x) => x !== d))
+                      }
+                      type="button"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="editor-col-right">
+            <label className="form-label">Rentang Jam</label>
+            <div className="time-range">
+              <TimePicker
+                label="Jam tersedia dari"
+                value={startHour}
+                onChange={(newStart) => {
+                  setStartHour(newStart);
+                  if (newStart >= endHour) setEndHour(Math.min(newStart + 0.5, 23.98));
+                }}
+              />
+              <span className="time-range-dash">—</span>
+              <TimePicker
+                label="sampai"
+                value={endHour}
+                onChange={(newEnd) => {
+                  if (newEnd > startHour) setEndHour(newEnd);
+                }}
+              />
+            </div>
+
+            <hr className="divider" />
+
+            {broadcastLink && (
+              <>
+                <label className="form-label">Link Undangan</label>
+                <div className="broadcast-row">
+                  <code className="broadcast-link">{broadcastLink}</code>
+                  <button className="btn btn-p" onClick={copyLink} style={{ fontSize: 12 }}>
+                    Salin
+                  </button>
+                </div>
+                <hr className="divider" />
+              </>
+            )}
+
+            {error && <div className="err-box">{error}</div>}
+            <button
+              className="btn btn-p"
+              style={{ width: "100%", padding: 12, marginTop: error ? 12 : 0 }}
+              disabled={!valid || saving}
+              onClick={handleSave}
+            >
+              {saving ? "Menyimpan..." : isNew ? "Buat Rapat" : "Simpan Perubahan"}
+            </button>
+          </div>
+        </div>
       </div>
+
+      {toast && (
+        <div className="toast-wrap">
+          <div className="toast ok">{toast}</div>
+        </div>
+      )}
     </div>
   );
 }

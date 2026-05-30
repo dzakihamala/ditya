@@ -508,6 +508,7 @@ body {
 .meeting-card-body {
   flex: 1;
   min-width: 0;
+  cursor: pointer;
 }
 
 .meeting-name {
@@ -609,6 +610,21 @@ body {
   padding: 32px;
 }
 
+.editor-cols {
+  display: flex;
+  gap: 40px;
+}
+
+.editor-col-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.editor-col-right {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Calendar */
 .calendar {
   user-select: none;
@@ -664,10 +680,10 @@ body {
 .calendar-cell {
   aspect-ratio: 1;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 5px;
   background: none;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-family: var(--font-sans);
   color: var(--text);
   display: flex;
@@ -1196,6 +1212,11 @@ body {
 
   .editor-card {
     padding: 20px 18px;
+  }
+
+  .editor-cols {
+    flex-direction: column;
+    gap: 0;
   }
 
   .time-range {

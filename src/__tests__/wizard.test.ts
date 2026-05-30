@@ -831,7 +831,6 @@ describe("Wizard Engine — full wizard flow scenarios", () => {
   it("Jendela Tampilan: filters display to current admin range without deleting data", () => {
     // Admin changes dates from [Jun 15, 16, 17] to [Jun 15, 16, 18]
     // Jun 17 data preserved but hidden; Jun 18 shown as pending
-    const oldDates = ["2026-06-15", "2026-06-16", "2026-06-17"];
     const newDates = ["2026-06-15", "2026-06-16", "2026-06-18"];
 
     const availability = {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useReducer } from "react";
 import { db } from "@/lib/firebase";
-import { normalizeName, getDeviceInfo, createParticipant, saveParticipantAvailability } from "@/lib/participant";
+import { normalizeName, getDeviceInfo, createParticipant, saveParticipantAvailability, saveParticipantDateSlot } from "@/lib/participant";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { TimeSelector } from "./time-selector";
 import { Review } from "./review";
@@ -21,6 +21,15 @@ type ExistingParticipant = {
   createdAt: string;
   availability?: Record<string, string[]>;
 };
+
+function formatAvailabilityLabel(
+  status: "filled" | "skipped" | "pending",
+  ranges: { start: string; end: string }[],
+): string {
+  if (status === "filled") return ranges.map((r) => `${r.start}–${r.end}`).join(", ");
+  if (status === "skipped") return "Tidak bisa";
+  return "Belum diisi";
+}
 
 export function ParticipantLanding({ meetingId }: { meetingId: string }) {
   const [wizard, dispatch] = useReducer(wizardReducer, createInitialState());
@@ -195,15 +204,6 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
     }
   }, [wizard.activeDateIndex, wizard.dates.length]);
 
-  const handlePrevDate = useCallback(() => {
-    if (wizard.activeDateIndex > 0) {
-      dispatch({
-        type: "SET_DATE_INDEX",
-        index: wizard.activeDateIndex - 1,
-      });
-    }
-  }, [wizard.activeDateIndex]);
-
   const handleGoToReview = useCallback(() => {
     dispatch({ type: "GO_TO_REVIEW" });
   }, []);
@@ -225,7 +225,6 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
       dispatch({ type: "UPDATE_SLOTS", date, slots });
       if (wizard.participantId) {
         try {
-          const { saveParticipantDateSlot } = await import("@/lib/participant");
           await saveParticipantDateSlot(
             db,
             meetingId,
@@ -244,6 +243,22 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
   const handleModifyDone = useCallback(() => {
     dispatch({ type: "MODIFY_DONE" });
   }, []);
+
+  const handleModifyAgain = useCallback(() => {
+    if (wizard.isModifyMode) {
+      dispatch({
+        type: "START_MODIFY",
+        displayName: wizard.displayName,
+        participantId: wizard.participantId!,
+        availability: wizard.availability,
+      });
+    } else {
+      dispatch({
+        type: "GO_TO_EDIT",
+        date: wizard.dates[0] || "",
+      });
+    }
+  }, [wizard.isModifyMode, wizard.displayName, wizard.participantId, wizard.availability, wizard.dates]);
 
   const handleConfirm = useCallback(async () => {
     setSaving(true);
@@ -425,11 +440,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
                           : "var(--muted)",
                   }}
                 >
-                  {item.status === "filled" && item.ranges.length > 0
-                    ? item.ranges.map((r) => `${r.start}–${r.end}`).join(", ")
-                    : item.status === "skipped"
-                      ? "Tidak bisa"
-                      : "Belum diisi"}
+                  {formatAvailabilityLabel(item.status, item.ranges)}
                 </div>
               </div>
             ))}
@@ -489,7 +500,6 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         initialAvailability={wizard.availability}
         onSave={inModifyMode ? handleModifySaveSlot : handleSaveSlot}
         onNext={handleNextDate}
-        onPrev={handlePrevDate}
         onDateChange={handleDateChange}
         activeDateIndex={wizard.activeDateIndex}
         onGoToReview={inModifyMode ? undefined : handleGoToReview}
@@ -542,21 +552,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
           </p>
           <button
             className="btn btn-o"
-            onClick={() =>
-              dispatch(
-                wizard.isModifyMode
-                  ? {
-                      type: "START_MODIFY",
-                      displayName: wizard.displayName,
-                      participantId: wizard.participantId!,
-                      availability: wizard.availability,
-                    }
-                  : {
-                      type: "GO_TO_EDIT",
-                      date: wizard.dates[0] || "",
-                    },
-              )
-            }
+            onClick={handleModifyAgain}
             style={{ fontSize: 13 }}
           >
             Ubah jadwal

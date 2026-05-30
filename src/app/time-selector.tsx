@@ -16,7 +16,6 @@ interface TimeSelectorProps {
   initialAvailability: Record<string, string[]>;
   onSave: (date: string, slots: string[]) => void;
   onNext: () => void;
-  onPrev: () => void;
   activeDateIndex?: number;
   onDateChange?: (date: string) => void;
   onGoToReview?: () => void;
@@ -31,7 +30,6 @@ export function TimeSelector({
   initialAvailability,
   onSave,
   onNext,
-  onPrev,
   activeDateIndex: controlledIndex,
   onDateChange: controlledDateChange,
   onGoToReview,

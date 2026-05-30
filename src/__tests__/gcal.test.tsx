@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, fireEvent, act } from "@testing-library/react";
+import { render, fireEvent, act, waitFor } from "@testing-library/react";
 
 // Mock getConflictingSlots to return predictable conflicts
 vi.mock("@/lib/time-selector", async () => {
@@ -41,6 +41,7 @@ describe("GCalButton — env vars not configured", () => {
 
 describe("GCalButton — connect and disconnect flow", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     vi.resetModules();
     // Re-apply mock after reset
     vi.doMock("@/lib/time-selector", async () => {
@@ -64,6 +65,7 @@ describe("GCalButton — connect and disconnect flow", () => {
         }),
         client: {
           init: vi.fn(() => Promise.resolve()),
+          load: vi.fn(() => Promise.resolve()),
           calendar: {
             events: {
               list: vi.fn(() =>
@@ -112,6 +114,7 @@ describe("GCalButton — connect and disconnect flow", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.useRealTimers();
   });
 
   it("renders connect button when env vars are present", async () => {
@@ -140,6 +143,11 @@ describe("GCalButton — connect and disconnect flow", () => {
       />,
     );
 
+    // Advance past the 500ms gapi pre-load delay + flush promises
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
+
     const btn = container.querySelector(".ts-gcal-btn") as HTMLButtonElement;
     await act(async () => {
       fireEvent.click(btn);
@@ -164,6 +172,11 @@ describe("GCalButton — connect and disconnect flow", () => {
         onConflictsChange={onConflictsChange}
       />,
     );
+
+    // Advance past the 500ms gapi pre-load delay + flush promises
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
 
     // Connect first
     const connectBtn = container.querySelector(".ts-gcal-btn") as HTMLButtonElement;
@@ -240,13 +253,20 @@ describe("GCalButton — connect and disconnect flow", () => {
       />,
     );
 
+    // Advance past the 500ms gapi pre-load delay + flush promises
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
+
     const btn = container.querySelector(".ts-gcal-btn") as HTMLButtonElement;
     await act(async () => {
       fireEvent.click(btn);
     });
 
+    // OAuth error "access_denied" → the component now shows "Kamu menolak akses"
+    // The old message "Gagal menghubungkan Google Calendar" is for other errors.
     expect(container.textContent).toContain(
-      "Gagal menghubungkan Google Calendar",
+      "Kamu menolak akses",
     );
   });
 
@@ -263,6 +283,11 @@ describe("GCalButton — connect and disconnect flow", () => {
         onEventsFetched={onEventsFetched}
       />,
     );
+
+    // Advance past the 500ms gapi pre-load delay + flush promises
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
 
     const btn = container.querySelector(".ts-gcal-btn") as HTMLButtonElement;
     await act(async () => {

@@ -245,7 +245,7 @@ function Heatmap({
 /*  Recommendations                                                    */
 /* ------------------------------------------------------------------ */
 
-function Recommendations({ blocks }: { blocks: ContiguousBlock[] }) {
+export function Recommendations({ blocks }: { blocks: ContiguousBlock[] }) {
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
 
   if (blocks.length === 0) {
@@ -298,8 +298,8 @@ function Recommendations({ blocks }: { blocks: ContiguousBlock[] }) {
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </button>
-              {expanded && (
-                <div className="analysis-rec-body">
+              <div className={`analysis-rec-body ${expanded ? "expanded" : ""}`}>
+                <div className="analysis-rec-body-inner">
                   <div className="analysis-rec-attendees">
                     <h4 className="analysis-rec-subtitle">
                       Bisa hadir ({block.participantNames.length})
@@ -327,7 +327,7 @@ function Recommendations({ blocks }: { blocks: ContiguousBlock[] }) {
                     </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
           );
         })}

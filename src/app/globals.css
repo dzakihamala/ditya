@@ -330,6 +330,65 @@ body {
   }
 }
 
+/* ─── Wizard step transition ─── */
+.wizard-step {
+  animation: stepIn 0.2s ease;
+}
+
+@keyframes stepIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Slot selection pulse ─── */
+@keyframes slotPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+.time-bar-slot.sel {
+  animation: slotPulse 0.18s ease;
+}
+
+.time-list-indicator.sel {
+  animation: slotPulse 0.18s ease;
+}
+
+/* ─── Button hover scale ─── */
+.btn:hover {
+  transform: scale(1.02);
+}
+
+.btn-ghost:hover {
+  transform: scale(1.02);
+}
+
+.btn-danger:hover {
+  transform: scale(1.02);
+}
+
+.btn-a:hover {
+  transform: scale(1.02);
+}
+
+/* ─── Accessibility: reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Divider */
 .divider {
   border: none;

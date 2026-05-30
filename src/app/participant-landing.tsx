@@ -152,7 +152,6 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
   };
 
   const handleNo = () => {
-    setName("");
     setExisting(null);
     setShowNewNameHint(true);
   };
@@ -327,7 +326,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
   // ---- STEP 2: GCal opt-in ----
   if (wizard.step === "gcal") {
     return (
-      <div className="wizard-wrap" style={{ padding: "28px 24px" }}>
+      <div className="wizard-wrap wizard-step" style={{ padding: "28px 24px" }}>
         <div className="card" style={{ maxWidth: 440, padding: "32px" }}>
           <div className="card-badge">Langkah 2 — Kalender</div>
           <h1
@@ -381,7 +380,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
   if (wizard.step === "modify") {
     const items = getReviewItems(wizard.availability, wizard.dates);
     return (
-      <div className="wizard-wrap" style={{ padding: "28px 24px" }}>
+      <div className="wizard-wrap wizard-step" style={{ padding: "28px 24px" }}>
         <div className="card" style={{ maxWidth: 520, padding: "32px" }}>
           <div className="card-badge">Ubah Jadwal</div>
           <h1
@@ -492,20 +491,22 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
     const activeDate = wizard.dates[wizard.activeDateIndex];
     const inModifyMode = wizard.isModifyMode;
     return (
-      <TimeSelector
-        meetingId={meetingId}
-        dates={wizard.dates}
-        startHour={wizard.startHour}
-        endHour={wizard.endHour}
-        initialAvailability={wizard.availability}
-        onSave={inModifyMode ? handleModifySaveSlot : handleSaveSlot}
-        onNext={handleNextDate}
-        onDateChange={handleDateChange}
-        activeDateIndex={wizard.activeDateIndex}
-        onGoToReview={inModifyMode ? undefined : handleGoToReview}
-        modifyDate={inModifyMode ? wizard.dates[wizard.activeDateIndex] : undefined}
-        onModifyDone={inModifyMode ? handleModifyDone : undefined}
-      />
+      <div className="wizard-step">
+        <TimeSelector
+          meetingId={meetingId}
+          dates={wizard.dates}
+          startHour={wizard.startHour}
+          endHour={wizard.endHour}
+          initialAvailability={wizard.availability}
+          onSave={inModifyMode ? handleModifySaveSlot : handleSaveSlot}
+          onNext={handleNextDate}
+          onDateChange={handleDateChange}
+          activeDateIndex={wizard.activeDateIndex}
+          onGoToReview={inModifyMode ? undefined : handleGoToReview}
+          modifyDate={inModifyMode ? wizard.dates[wizard.activeDateIndex] : undefined}
+          onModifyDone={inModifyMode ? handleModifyDone : undefined}
+        />
+      </div>
     );
   }
 
@@ -513,21 +514,23 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
   if (wizard.step === "review") {
     const items = getReviewItems(wizard.availability, wizard.dates);
     return (
-      <Review
-        items={items}
-        displayName={wizard.displayName}
-        onEdit={handleEdit}
-        onSave={handleConfirm}
-        saving={saving}
-        error={wizard.error}
-      />
+      <div className="wizard-step">
+        <Review
+          items={items}
+          displayName={wizard.displayName}
+          onEdit={handleEdit}
+          onSave={handleConfirm}
+          saving={saving}
+          error={wizard.error}
+        />
+      </div>
     );
   }
 
   // ---- STEP 5: Thank you ----
   if (wizard.step === "saved") {
     return (
-      <div className="wizard-wrap">
+      <div className="wizard-wrap wizard-step">
         <div className="card" style={{ maxWidth: 440, textAlign: "center" }}>
           <div
             style={{
@@ -574,7 +577,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
 
   // ---- STEP 1: Name input ----
   return (
-    <div className="wizard-wrap">
+    <div className="wizard-wrap wizard-step">
       <div className="card" style={{ maxWidth: 440 }}>
         <div className="card-badge">Langkah 1 — Nama</div>
         <h1

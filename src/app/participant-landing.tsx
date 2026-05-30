@@ -309,96 +309,54 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
 
   const checking = wizard.error === "checking";
 
-  let content: React.ReactNode;
+  const toastNode = toast ? (
+    <div className="toast-wrap">
+      <div className="toast ok">{toast}</div>
+    </div>
+  ) : null;
 
   if (wizard.error && wizard.step === "loading" && !checking) {
-    content = (
-      <div className="wizard-wrap">
-        <div className="card" style={{ maxWidth: 440, textAlign: "center" }}>
-          <div className="card-badge" style={{ color: "var(--red)" }}>
-            Error
-          </div>
-          <p style={{ fontSize: 14, marginBottom: 20 }}>{wizard.error}</p>
-          <button
-            className="btn btn-o"
-            onClick={() => window.location.reload()}
-          >
-            Coba lagi
-          </button>
-        </div>
-      </div>
-    );
-  } else if (wizard.step === "loading") {
-    content = (
-      <div className="loading" role="status">
-        <div className="spinner" />
-        <p
-          style={{
-            fontSize: 13,
-            color: "var(--muted)",
-            fontFamily: "var(--font-mono)",
-          }}
-        >
-          Memuat...
-        </p>
-      </div>
-    );
-  } else if (wizard.step === "gcal") {
-    // ---- STEP 2: GCal opt-in ----
-    content = (
-      <div className="wizard-wrap wizard-step" style={{ padding: "28px 24px" }}>
-        <div className="card" style={{ maxWidth: 440, padding: "32px" }}>
-          <div className="card-badge">Langkah 2 — Kalender</div>
-          <h1
-            style={{
-              fontSize: 22,
-              fontWeight: 500,
-              marginBottom: 8,
-              color: "var(--text)",
-            }}
-          >
-            Hubungkan Google Calendar
-          </h1>
-          <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 20 }}>
-            Anda dapat menghubungkan Google Calendar untuk melihat acara yang
-            bentrok saat memilih waktu. Slot yang bentrok akan ditampilkan
-            sebagai informasi — Anda tetap bisa memilihnya.
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ width: "100%" }}>
-              <GCalButton
-                dates={wizard.dates}
-                startHour={wizard.startHour}
-                endHour={wizard.endHour}
-                onConflictsChange={() => {}}
-                onEventsFetched={handleGcalEventsFetched}
-              />
+    return (
+      <>
+        <div className="wizard-wrap">
+          <div className="card" style={{ maxWidth: 440, textAlign: "center" }}>
+            <div className="card-badge" style={{ color: "var(--red)" }}>
+              Error
             </div>
+            <p style={{ fontSize: 14, marginBottom: 20 }}>{wizard.error}</p>
             <button
               className="btn btn-o"
-              onClick={handleSkipGcal}
-              style={{ width: "100%" }}
+              onClick={() => window.location.reload()}
             >
-              Lewati
+              Coba lagi
             </button>
           </div>
-          <p
-            style={{
-              fontSize: 11,
-              color: "var(--muted)",
-              marginTop: 14,
-              textAlign: "center",
-              fontFamily: "var(--font-mono)",
-            }}
-          >
-            Anda bisa menghubungkan nanti di halaman pemilihan waktu.
-          </p>
         </div>
-      </div>
+        {toastNode}
+      </>
     );
   }
 
-  // ---- STEP 2.5: GCal conflict panel ----
+  if (wizard.step === "loading") {
+    return (
+      <>
+        <div className="loading" role="status">
+          <div className="spinner" />
+          <p
+            style={{
+              fontSize: 13,
+              color: "var(--muted)",
+              fontFamily: "var(--font-mono)",
+            }}
+          >
+            Memuat...
+          </p>
+        </div>
+        {toastNode}
+      </>
+    );
+  }
+
   if (wizard.step === "gcal-conflicts") {
     return (
       <GCalConflictPanel
@@ -409,10 +367,67 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
     );
   }
 
-  // ---- MODIFY STEP: Modify flow entry ----
+  if (wizard.step === "gcal") {
+    return (
+      <>
+        <div className="wizard-wrap wizard-step" style={{ padding: "28px 24px" }}>
+          <div className="card" style={{ maxWidth: 440, padding: "32px" }}>
+            <div className="card-badge">Langkah 2 — Kalender</div>
+            <h1
+              style={{
+                fontSize: 22,
+                fontWeight: 500,
+                marginBottom: 8,
+                color: "var(--text)",
+              }}
+            >
+              Hubungkan Google Calendar
+            </h1>
+            <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 20 }}>
+              Anda dapat menghubungkan Google Calendar untuk melihat acara yang
+              bentrok saat memilih waktu. Slot yang bentrok akan ditampilkan
+              sebagai informasi — Anda tetap bisa memilihnya.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ width: "100%" }}>
+                <GCalButton
+                  dates={wizard.dates}
+                  startHour={wizard.startHour}
+                  endHour={wizard.endHour}
+                  onConflictsChange={() => {}}
+                  onEventsFetched={handleGcalEventsFetched}
+                />
+              </div>
+              <button
+                className="btn btn-o"
+                onClick={handleSkipGcal}
+                style={{ width: "100%" }}
+              >
+                Lewati
+              </button>
+            </div>
+            <p
+              style={{
+                fontSize: 11,
+                color: "var(--muted)",
+                marginTop: 14,
+                textAlign: "center",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              Anda bisa menghubungkan nanti di halaman pemilihan waktu.
+            </p>
+          </div>
+        </div>
+        {toastNode}
+      </>
+    );
+  }
+
   if (wizard.step === "modify") {
     const items = getReviewItems(wizard.availability, wizard.dates);
-    content = (
+    return (
+      <>
       <div className="wizard-wrap wizard-step" style={{ padding: "28px 24px" }}>
         <div className="card" style={{ maxWidth: 520, padding: "32px" }}>
           <div className="card-badge">Ubah Jadwal</div>
@@ -516,11 +531,15 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
           )}
         </div>
       </div>
+        {toastNode}
+      </>
     );
-  } else if (wizard.step === "select-time" && wizard.dates.length > 0) {
-    // ---- STEP 3: Select time ----
+  }
+
+  if (wizard.step === "select-time" && wizard.dates.length > 0) {
     const inModifyMode = wizard.isModifyMode;
-    content = (
+    return (
+      <>
       <div className="wizard-step">
         <TimeSelector
           meetingId={meetingId}
@@ -538,11 +557,33 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
           onModifyDone={inModifyMode ? handleModifyDone : undefined}
         />
       </div>
+        {toastNode}
+      </>
     );
-  } else if (wizard.step === "review") {
-    // ---- STEP 4: Review ----
+  }
+
+  if (wizard.step === "select-time" && wizard.dates.length === 0) {
+    return (
+      <>
+        <div className="wizard-wrap">
+          <div className="card" style={{ maxWidth: 440, textAlign: "center" }}>
+            <div className="card-badge" style={{ color: "var(--red)" }}>
+              Error
+            </div>
+            <p style={{ fontSize: 14, marginBottom: 20 }}>
+              Rapat ini belum memiliki tanggal. Hubungi penyelenggara rapat.
+            </p>
+          </div>
+        </div>
+        {toastNode}
+      </>
+    );
+  }
+
+  if (wizard.step === "review") {
     const items = getReviewItems(wizard.availability, wizard.dates);
-    content = (
+    return (
+      <>
       <div className="wizard-step">
         <Review
           items={items}
@@ -553,10 +594,14 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
           error={wizard.error}
         />
       </div>
+        {toastNode}
+      </>
     );
-  } else if (wizard.step === "saved") {
-    // ---- STEP 5: Thank you ----
-    content = (
+  }
+
+  if (wizard.step === "saved") {
+    return (
+      <>
       <div className="wizard-wrap wizard-step">
         <div className="card" style={{ maxWidth: 440, textAlign: "center" }}>
           <div
@@ -599,10 +644,14 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
           </p>
         </div>
       </div>
+        {toastNode}
+      </>
     );
-  } else {
-    // ---- STEP 1: Name input ----
-    content = (
+  }
+
+  // ---- STEP 1: Name input ----
+  return (
+    <>
       <div className="wizard-wrap wizard-step">
         <div className="card" style={{ maxWidth: 440 }}>
           <div className="card-badge">Langkah 1 — Nama</div>
@@ -620,9 +669,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
             Silakan masukkan nama Anda untuk melanjutkan.
           </p>
 
-          {wizard.step === "input" && (
-            <>
-              {!existing ? (
+          {!existing ? (
                 <form onSubmit={handleSubmit}>
                   <label className="form-label">Nama Anda</label>
                   <input
@@ -715,18 +762,16 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
                 </div>
               )}
 
-              {checking && (
-                <div style={{ textAlign: "center", padding: "20px 0" }}>
-                  <div className="spinner" style={{ margin: "0 auto 12px" }} />
-                  <p style={{ fontSize: 13, color: "var(--muted)" }}>
-                    Memeriksa data...
-                  </p>
-                </div>
-              )}
-            </>
+          {checking && (
+            <div style={{ textAlign: "center", padding: "20px 0" }}>
+              <div className="spinner" style={{ margin: "0 auto 12px" }} />
+              <p style={{ fontSize: 13, color: "var(--muted)" }}>
+                Memeriksa data...
+              </p>
+            </div>
           )}
 
-          {wizard.step === "input" && !existing && showNewNameHint && !checking && (
+          {!existing && showNewNameHint && !checking && (
             <div
               className="err-box"
               style={{ marginTop: 12, marginBottom: 0 }}
@@ -736,17 +781,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
           )}
         </div>
       </div>
-    );
-  }
-
-  return (
-    <>
-      {content}
-      {toast && (
-        <div className="toast-wrap">
-          <div className="toast ok">{toast}</div>
-        </div>
-      )}
+      {toastNode}
     </>
   );
 }

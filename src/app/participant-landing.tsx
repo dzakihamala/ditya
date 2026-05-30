@@ -2,19 +2,26 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { db } from "@/lib/firebase";
-import { normalizeName } from "@/lib/participant";
+import { normalizeName, getDeviceInfo, createParticipant, saveParticipantAvailability } from "@/lib/participant";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { TimeSelector } from "./time-selector";
 
-type Meeting = { eventName: string };
+type Meeting = {
+  eventName: string;
+  dates: string[];
+  startHour: number;
+  endHour: number;
+};
 
 type ExistingParticipant = {
   id: string;
   displayName: string;
   deviceInfo: { os: string; browser: string };
   createdAt: string;
+  availability?: Record<string, string[]>;
 };
 
-type Step = "loading" | "input" | "checking" | "duplicate" | "new-name" | "done";
+type Step = "loading" | "input" | "checking" | "duplicate" | "new-name" | "select-time" | "saved";
 
 export function ParticipantLanding({ meetingId }: { meetingId: string }) {
   const [meeting, setMeeting] = useState<Meeting | null>(null);
@@ -22,6 +29,8 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
   const [name, setName] = useState("");
   const [step, setStep] = useState<Step>("loading");
   const [existing, setExisting] = useState<ExistingParticipant | null>(null);
+  const [participantId, setParticipantId] = useState<string | null>(null);
+  const [availability, setAvailability] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     const fetchMeeting = async () => {
@@ -31,7 +40,13 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
           setError("Rapat tidak ditemukan atau sudah dihapus.");
           return;
         }
-        setMeeting({ eventName: snap.data().eventName ?? "Tanpa Judul" });
+        const data = snap.data();
+        setMeeting({
+          eventName: data.eventName ?? "Tanpa Judul",
+          dates: data.dates ?? [],
+          startHour: data.startHour ?? 8,
+          endHour: data.endHour ?? 17,
+        });
         setStep("input");
       } catch {
         setError("Gagal memuat data rapat. Periksa koneksi Anda.");
@@ -56,17 +71,18 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         const snap = await getDocs(q);
 
         if (!snap.empty) {
-          const doc = snap.docs[0];
-          const data = doc.data();
+          const docSnap = snap.docs[0];
+          const data = docSnap.data();
           setExisting({
-            id: doc.id,
+            id: docSnap.id,
             displayName: data.displayName ?? trimmed,
             deviceInfo: data.deviceInfo ?? { os: "Unknown", browser: "Unknown" },
             createdAt: data.createdAt ?? "",
+            availability: data.availability ?? {},
           });
           setStep("duplicate");
         } else {
-          setStep("done");
+          await startNewParticipant(trimmed);
         }
       } catch {
         setError("Gagal memeriksa data. Coba lagi.");
@@ -75,6 +91,27 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
     },
     [meetingId],
   );
+
+  const startNewParticipant = async (displayName: string) => {
+    if (!meeting) return;
+    try {
+      const id = await createParticipant(db, meetingId, {
+        name: displayName,
+        displayName,
+        deviceInfo: getDeviceInfo(),
+      });
+      sessionStorage.setItem(
+        `participant:${meetingId}`,
+        JSON.stringify({ id, name: displayName }),
+      );
+      setParticipantId(id);
+      setAvailability({});
+      setStep("select-time");
+    } catch {
+      setError("Gagal menyimpan data. Coba lagi.");
+      setStep("input");
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +124,9 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         `participant:${meetingId}`,
         JSON.stringify({ id: existing.id, name: existing.displayName }),
       );
+      setParticipantId(existing.id);
+      setAvailability(existing.availability ?? {});
+      setStep("select-time");
     }
     setError(null);
   };
@@ -96,6 +136,25 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
     setExisting(null);
     setStep("new-name");
   };
+
+  const handleSaveSlot = useCallback(
+    async (date: string, slots: string[]) => {
+      const updated = { ...availability, [date]: slots };
+      setAvailability(updated);
+      if (participantId) {
+        try {
+          await saveParticipantAvailability(db, meetingId, participantId, updated);
+        } catch {
+          // Firestore save failed silently — data is still in local state
+        }
+      }
+    },
+    [availability, participantId, meetingId],
+  );
+
+  const handleComplete = useCallback(() => {
+    setStep("saved");
+  }, []);
 
   if (error && step !== "duplicate") {
     return (
@@ -123,6 +182,61 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         >
           Memuat...
         </p>
+      </div>
+    );
+  }
+
+  if (step === "select-time" && meeting) {
+    return (
+      <TimeSelector
+        meetingId={meetingId}
+        dates={meeting.dates}
+        startHour={meeting.startHour}
+        endHour={meeting.endHour}
+        initialAvailability={availability}
+        onSave={handleSaveSlot}
+        onNext={handleComplete}
+        onPrev={() => {}}
+      />
+    );
+  }
+
+  if (step === "saved") {
+    return (
+      <div className="wizard-wrap">
+        <div className="card" style={{ maxWidth: 440, textAlign: "center" }}>
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: "50%",
+              background: "var(--green-pale)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 12px",
+              fontSize: 20,
+            }}
+          >
+            ✓
+          </div>
+          <p style={{ fontSize: 14, color: "var(--text)", marginBottom: 4 }}>
+            Terima kasih, <strong>{name || existing?.displayName}</strong>!
+          </p>
+          <p style={{ fontSize: 13, color: "var(--muted)" }}>
+            Ketersediaan Anda telah disimpan.
+          </p>
+          <p
+            style={{
+              fontSize: 11,
+              color: "var(--muted)",
+              marginTop: 12,
+              fontFamily: "var(--font-mono)",
+            }}
+          >
+            Anda dapat menutup halaman ini.
+          </p>
+        </div>
       </div>
     );
   }
@@ -249,44 +363,6 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
                 Bukan saya
               </button>
             </div>
-          </div>
-        )}
-
-        {/* Done state - no duplicate */}
-        {step === "done" && (
-          <div style={{ textAlign: "center", padding: "20px 0" }}>
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: "50%",
-                background: "var(--green-pale)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 12px",
-                fontSize: 20,
-              }}
-            >
-              ✓
-            </div>
-            <p style={{ fontSize: 14, color: "var(--text)", marginBottom: 4 }}>
-              Hai, <strong>{name.trim()}</strong>!
-            </p>
-            <p style={{ fontSize: 13, color: "var(--muted)" }}>
-              Data Anda siap. Langkah selanjutnya adalah memilih waktu
-              ketersediaan.
-            </p>
-            <p
-              style={{
-                fontSize: 11,
-                color: "var(--muted)",
-                marginTop: 16,
-                fontFamily: "var(--font-mono)",
-              }}
-            >
-              (Time Selector akan hadir di issue berikutnya)
-            </p>
           </div>
         )}
       </div>

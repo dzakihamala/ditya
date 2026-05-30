@@ -729,6 +729,332 @@ body {
   color: var(--muted);
 }
 
+/* ─── Time Selector: shared ─── */
+.ts-wrap {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.ts-dates {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px 0 16px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ts-date-chip {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  color: var(--text);
+  transition: all 0.15s;
+  text-align: center;
+  min-width: 80px;
+}
+
+.ts-date-chip:hover {
+  border-color: var(--green);
+}
+
+.tsdc-day {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.tsdc-num {
+  display: block;
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.ts-date-chip.active {
+  border-color: var(--accent);
+  background: #fdf8ef;
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.ts-date-chip.filled {
+  border-color: var(--green);
+  background: var(--green-pale);
+}
+
+.ts-date-chip.skipped {
+  background: var(--bg);
+  color: var(--muted);
+  border-style: dashed;
+}
+
+.ts-date-chip.filled .tsdc-day,
+.ts-date-chip.filled .tsdc-num {
+  color: var(--green-dark);
+}
+
+.ts-gcal-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.ts-gcal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 7px 14px;
+}
+
+.ts-gcal-connected {
+  font-size: 12px;
+  color: var(--green-dark);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ─── Desktop Time Bar ─── */
+.time-bar {
+  user-select: none;
+  margin-top: 4px;
+}
+
+.time-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 0 6px;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+.time-bar-track {
+  position: relative;
+  height: 48px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+}
+
+.time-bar-slot {
+  flex: 1;
+  border-right: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.08s;
+}
+
+.time-bar-slot.hour-mark {
+  border-right-color: var(--border-2);
+}
+
+.time-bar-slot.half-mark {
+  border-right-color: var(--border);
+}
+
+.time-bar-slot.sel {
+  background: var(--green);
+}
+
+.time-bar-slot.conflict {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.04) 3px,
+    rgba(0, 0, 0, 0.04) 6px
+  );
+}
+
+.time-bar-slot.conflict.sel {
+  background: var(--green);
+  opacity: 0.7;
+}
+
+.time-bar-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  align-items: center;
+}
+
+.time-bar-legend-swatch {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.time-bar-legend-swatch.sel-swatch {
+  background: var(--green);
+}
+
+.time-bar-legend-swatch.conflict-swatch {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.04) 3px,
+    rgba(0, 0, 0, 0.04) 6px
+  );
+}
+
+/* ─── Mobile Tap List ─── */
+.time-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.time-list-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-radius: 6px;
+  margin: 1px 4px;
+}
+
+.time-list-row:hover {
+  background: var(--green-pale);
+}
+
+.time-list-row:first-child {
+  margin-top: 4px;
+}
+
+.time-list-row:last-child {
+  margin-bottom: 4px;
+}
+
+.time-list-time {
+  font-size: 13px;
+  font-family: var(--font-mono);
+  color: var(--text);
+  min-width: 48px;
+}
+
+.time-list-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 2px solid var(--border-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: #fff;
+  transition: all 0.1s;
+}
+
+.time-list-indicator.sel {
+  background: var(--green);
+  border-color: var(--green-dark);
+}
+
+.time-list-row.conflict .time-list-time {
+  color: var(--accent);
+}
+
+.time-list-row.conflict .time-list-indicator.sel {
+  opacity: 0.7;
+}
+
+.time-list-gcal-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ─── Skip row ─── */
+.ts-skip-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* ─── Nav row ─── */
+.ts-nav-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+}
+
+/* ─── Summary in ranges ─── */
+.ts-summary {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  margin-top: 8px;
+}
+
+/* ─── GCal tooltip ─── */
+.gcal-tooltip {
+  position: absolute;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translate(-50%, -100%);
+  margin-top: -8px;
+}
+
+.gcal-tooltip-name {
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.gcal-tooltip-hint {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Desktop time bar (default shown) */
+.time-bar {
+  display: block;
+}
+
+/* Mobile tap list (default hidden) */
+.time-list-wrap {
+  display: none;
+}
+
 /* Mobile */
 @media (max-width: 600px) {
   .meeting-card {
@@ -752,5 +1078,16 @@ body {
   .broadcast-row {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+/* Time Selector responsive: show mobile list, hide desktop bar below 768px */
+@media (max-width: 768px) {
+  .time-bar {
+    display: none;
+  }
+
+  .time-list-wrap {
+    display: block;
   }
 }

@@ -193,6 +193,42 @@ export interface GCalEvent {
   summary?: string;
 }
 
+function parseGCalInstant(iso: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    return new Date(iso + "T00:00:00");
+  }
+  return new Date(iso);
+}
+
+/** Slots with start times in [startTime, endTime) within the meeting day window. */
+export function slotsInTimeRange(
+  startTime: string,
+  endTime: string,
+  startHour: number,
+  endHour: number,
+): string[] {
+  const startMin = timeToMinutes(startTime);
+  const endMin = timeToMinutes(endTime);
+  return generateSlots(startHour, endHour).filter((slot) => {
+    const m = timeToMinutes(slot);
+    return m >= startMin && m < endMin;
+  });
+}
+
+export function getConflictsByDate(
+  events: GCalEvent[],
+  dates: string[],
+  startHour: number,
+  endHour: number,
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  for (const date of dates) {
+    const slots = getConflictingSlots(events, date, startHour, endHour);
+    if (slots.length > 0) result[date] = slots;
+  }
+  return result;
+}
+
 export function getConflictingSlots(
   events: GCalEvent[],
   date: string,
@@ -203,8 +239,8 @@ export function getConflictingSlots(
   const conflicts = new Set<string>();
 
   for (const event of events) {
-    let eventStart = new Date(event.start);
-    let eventEnd = new Date(event.end);
+    let eventStart = parseGCalInstant(event.start);
+    let eventEnd = parseGCalInstant(event.end);
 
     if (isNaN(eventStart.getTime()) || isNaN(eventEnd.getTime())) continue;
 

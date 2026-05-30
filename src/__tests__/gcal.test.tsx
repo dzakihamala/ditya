@@ -148,7 +148,9 @@ describe("GCalButton — connect and disconnect flow", () => {
     // After successful auth, should show connected state and disconnect btn
     expect(container.textContent).toContain("Google Calendar terhubung");
     expect(container.textContent).toContain("Putuskan");
-    expect(onConflictsChange).toHaveBeenCalledWith(["09:00", "09:30"]);
+    expect(onConflictsChange).toHaveBeenCalledWith({
+      "2026-06-15": ["09:00", "09:30"],
+    });
   });
 
   it("disconnect clears conflicts and shows connect button again", async () => {
@@ -181,7 +183,7 @@ describe("GCalButton — connect and disconnect flow", () => {
 
     // Should show connect button again
     expect(container.textContent).toContain("Hubungkan Google Calendar");
-    expect(onConflictsChange).toHaveBeenLastCalledWith([]);
+    expect(onConflictsChange).toHaveBeenLastCalledWith({});
   });
 
   it("shows error when gapi is not available", async () => {

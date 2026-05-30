@@ -12,6 +12,8 @@ import {
   slotsToRanges,
   getDateChipStatus,
   getConflictingSlots,
+  getConflictsByDate,
+  slotsInTimeRange,
   gridPixelToSlot,
   slotIndexToTime,
   getBlocks,
@@ -342,6 +344,48 @@ describe("getConflictingSlots", () => {
       },
     ];
     expect(getConflictingSlots(events, date, startHour, endHour)).toEqual([]);
+  });
+
+  it("handles all-day events with date-only strings", () => {
+    const events = [
+      {
+        start: "2026-06-15",
+        end: "2026-06-16",
+      },
+    ];
+    const conflicts = getConflictingSlots(events, date, startHour, endHour);
+    expect(conflicts.length).toBeGreaterThan(0);
+    expect(conflicts[0]).toBe("08:00");
+  });
+});
+
+describe("getConflictsByDate", () => {
+  it("maps conflicts per meeting date without merging times across days", () => {
+    const events = [
+      {
+        start: "2026-06-15T09:00:00",
+        end: "2026-06-15T10:00:00",
+      },
+      {
+        start: "2026-06-16T14:00:00",
+        end: "2026-06-16T15:00:00",
+      },
+    ];
+    expect(
+      getConflictsByDate(events, ["2026-06-15", "2026-06-16"], 8, 17),
+    ).toEqual({
+      "2026-06-15": ["09:00", "09:30"],
+      "2026-06-16": ["14:00", "14:30"],
+    });
+  });
+});
+
+describe("slotsInTimeRange", () => {
+  it("includes every slot that starts before the block end time", () => {
+    expect(slotsInTimeRange("08:00", "09:00", 8, 17)).toEqual([
+      "08:00",
+      "08:30",
+    ]);
   });
 });
 

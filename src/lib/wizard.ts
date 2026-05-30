@@ -22,7 +22,7 @@ export interface WizardState {
   error: string | null;
   gcalConnected: boolean;
   gcalEvents: GCalEvent[];
-  conflictSlots: string[];
+  conflictsByDate: Record<string, string[]>;
   confirmedAt: string | null;
   meetingTitle: string;
   isModifyMode: boolean;
@@ -35,7 +35,7 @@ export type WizardAction =
   | { type: "SKIP_GCAL" }
   | { type: "GCAL_CONNECTED" }
   | { type: "GCAL_EVENTS_LOADED"; events: GCalEvent[] }
-  | { type: "GCAL_CONFLICTS_CONFIRMED"; conflictSlots: string[]; selectedEvents: GCalEvent[] }
+  | { type: "GCAL_CONFLICTS_CONFIRMED"; conflictsByDate: Record<string, string[]>; selectedEvents: GCalEvent[] }
   | { type: "SET_DATE_INDEX"; index: number }
   | { type: "UPDATE_SLOTS"; date: string; slots: string[] }
   | { type: "GO_TO_REVIEW" }
@@ -61,7 +61,7 @@ export function createInitialState(): WizardState {
     error: null,
     gcalConnected: false,
     gcalEvents: [],
-    conflictSlots: [],
+    conflictsByDate: {},
     confirmedAt: null,
     meetingTitle: "",
     isModifyMode: false,
@@ -127,7 +127,7 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         ...state,
         step: "select-time",
         gcalConnected: true,
-        conflictSlots: action.conflictSlots,
+        conflictsByDate: action.conflictsByDate,
       };
 
     case "SET_DATE_INDEX": {
@@ -175,6 +175,7 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         availability: {},
         activeDateIndex: 0,
         isModifyMode: false,
+        conflictsByDate: {},
       };
 
     case "MODIFY_SINGLE_DATE": {

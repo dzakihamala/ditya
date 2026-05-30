@@ -15,7 +15,7 @@ import {
   wizardReducer,
   getReviewItems,
 } from "@/lib/wizard";
-import { getConflictingSlots, type GCalEvent } from "@/lib/time-selector";
+import { getConflictsByDate, type GCalEvent } from "@/lib/time-selector";
 
 type ExistingParticipant = {
   id: string;
@@ -170,20 +170,14 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
 
   const handleGcalConflictsConfirmed = useCallback(
     (selectedEvents: GCalEvent[]) => {
-      const allConflicts = new Set<string>();
-      for (const date of wizard.dates) {
-        for (const slot of getConflictingSlots(
-          selectedEvents,
-          date,
-          wizard.startHour,
-          wizard.endHour,
-        )) {
-          allConflicts.add(slot);
-        }
-      }
       dispatch({
         type: "GCAL_CONFLICTS_CONFIRMED",
-        conflictSlots: Array.from(allConflicts).sort(),
+        conflictsByDate: getConflictsByDate(
+          selectedEvents,
+          wizard.dates,
+          wizard.startHour,
+          wizard.endHour,
+        ),
         selectedEvents,
       });
     },
@@ -534,6 +528,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
           startHour={wizard.startHour}
           endHour={wizard.endHour}
           initialAvailability={wizard.availability}
+          initialConflictsByDate={wizard.conflictsByDate}
           onSave={inModifyMode ? handleModifySaveSlot : handleSaveSlot}
           onNext={handleNextDate}
           onDateChange={handleDateChange}

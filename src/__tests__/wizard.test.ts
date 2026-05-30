@@ -216,14 +216,14 @@ describe("Wizard Engine — state transitions", () => {
 
       const s = wizardReducer(base, {
         type: "GCAL_CONFLICTS_CONFIRMED",
-        conflictSlots: ["09:00", "09:30"],
+        conflictsByDate: { "2026-06-15": ["09:00", "09:30"] },
         selectedEvents: [
           { start: "2026-06-15T09:00:00", end: "2026-06-15T10:00:00", summary: "Meeting A" },
         ],
       });
 
       expect(s.step).toBe("select-time");
-      expect(s.conflictSlots).toEqual(["09:00", "09:30"]);
+      expect(s.conflictsByDate).toEqual({ "2026-06-15": ["09:00", "09:30"] });
       expect(s.gcalConnected).toBe(true);
     });
 
@@ -238,12 +238,12 @@ describe("Wizard Engine — state transitions", () => {
 
       const s = wizardReducer(base, {
         type: "GCAL_CONFLICTS_CONFIRMED",
-        conflictSlots: [],
+        conflictsByDate: {},
         selectedEvents: [],
       });
 
       expect(s.step).toBe("select-time");
-      expect(s.conflictSlots).toEqual([]);
+      expect(s.conflictsByDate).toEqual({});
       expect(s.gcalConnected).toBe(true);
     });
   });
@@ -757,12 +757,12 @@ describe("Wizard Engine — full wizard flow scenarios", () => {
 
     s = wizardReducer(s, {
       type: "GCAL_CONFLICTS_CONFIRMED",
-      conflictSlots: ["09:00", "09:30"],
+      conflictsByDate: { "2026-06-15": ["09:00", "09:30"] },
       selectedEvents: [events[0]],
     });
     expect(s.step).toBe("select-time");
     expect(s.gcalConnected).toBe(true);
-    expect(s.conflictSlots).toEqual(["09:00", "09:30"]);
+    expect(s.conflictsByDate).toEqual({ "2026-06-15": ["09:00", "09:30"] });
   });
 
   it("returning participant starts modify flow instead of gcal", () => {

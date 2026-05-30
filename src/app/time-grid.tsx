@@ -10,6 +10,7 @@ import {
   add30Minutes,
   subtract30Minutes,
   timeToMinutes,
+  slotsInTimeRange,
 } from "@/lib/time-selector";
 
 const CELL_HEIGHT = 28;
@@ -300,8 +301,8 @@ export function TimeGrid({
   }, [finishDrag]);
 
   const handleGridMouseLeave = useCallback(() => {
-    setDrag(null);
-  }, [setDrag]);
+    finishDrag();
+  }, [finishDrag]);
 
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
@@ -465,9 +466,11 @@ export function TimeGrid({
                 const topIdx = timeToSlotIndex(b.startTime, startHour);
                 const botIdx = timeToSlotIndex(b.endTime, startHour);
                 const dateConflicts = conflicts[b.date] ?? [];
-                const blockSlots = generateSlots(
-                  topIdx * 0.5 + startHour,
-                  botIdx * 0.5 + startHour,
+                const blockSlots = slotsInTimeRange(
+                  b.startTime,
+                  b.endTime,
+                  startHour,
+                  endHour,
                 );
                 const hasConflict = blockSlots.some((s) => dateConflicts.includes(s));
                 return (

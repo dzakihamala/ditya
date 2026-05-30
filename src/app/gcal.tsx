@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { getConflictingSlots, type GCalEvent } from "@/lib/time-selector";
+import { getConflictsByDate, type GCalEvent } from "@/lib/time-selector";
 import { formatDateLong } from "@/lib/date-utils";
 
 interface GCalButtonProps {
   dates: string[];
   startHour: number;
   endHour: number;
-  onConflictsChange: (conflicts: string[]) => void;
+  onConflictsChange: (conflictsByDate: Record<string, string[]>) => void;
   onEventsFetched?: (events: GCalEvent[]) => void;
   initialConnected?: boolean;
 }
@@ -29,9 +29,16 @@ const CHECKMARK_SVG = (
   </svg>
 );
 
+function parseGCalInstant(iso: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    return new Date(iso + "T00:00:00");
+  }
+  return new Date(iso);
+}
+
 function eventOverlapsDates(event: GCalEvent, dates: string[]): boolean {
-  const eventStart = new Date(event.start);
-  const eventEnd = new Date(event.end);
+  const eventStart = parseGCalInstant(event.start);
+  const eventEnd = parseGCalInstant(event.end);
   if (isNaN(eventStart.getTime()) || isNaN(eventEnd.getTime())) return false;
 
   return dates.some((date) => {
@@ -92,19 +99,7 @@ export function GCalButton({
         return;
       }
 
-      const allConflicts = new Set<string>();
-      for (const date of dates) {
-        for (const slot of getConflictingSlots(
-          allEvents,
-          date,
-          startHour,
-          endHour,
-        )) {
-          allConflicts.add(slot);
-        }
-      }
-
-      onConflictsChange(Array.from(allConflicts).sort());
+      onConflictsChange(getConflictsByDate(allEvents, dates, startHour, endHour));
     },
     [dates, startHour, endHour, onConflictsChange, onEventsFetched],
   );
@@ -162,7 +157,7 @@ export function GCalButton({
     if (window.gapi?.client) {
       window.gapi.client.setToken({ access_token: "" });
     }
-    onConflictsChange([]);
+    onConflictsChange({});
     setConnected(false);
     setError(null);
   }, [onConflictsChange]);

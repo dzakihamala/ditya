@@ -21,6 +21,7 @@ interface TimeSelectorProps {
   onGoToReview?: () => void;
   modifyDate?: string;
   onModifyDone?: () => void;
+  initialConflictsByDate?: Record<string, string[]>;
 }
 
 export function TimeSelector({
@@ -35,6 +36,7 @@ export function TimeSelector({
   onGoToReview,
   modifyDate,
   onModifyDone,
+  initialConflictsByDate = {},
 }: TimeSelectorProps) {
   const [availability, setAvailability] = useState<
     Record<string, string[]>
@@ -58,7 +60,9 @@ export function TimeSelector({
     [controlledIndex],
   );
 
-  const [conflicts, setConflicts] = useState<string[]>([]);
+  const [conflictsByDate, setConflictsByDate] = useState<
+    Record<string, string[]>
+  >(initialConflictsByDate);
 
   const activeDate = modifyDate ?? dates[activeIndex];
   const selectedSlots = availability[activeDate] ?? [];
@@ -97,13 +101,6 @@ export function TimeSelector({
     [dates, setActiveIndex, controlledDateChange],
   );
 
-  // Build conflicts-per-date map from flat conflicts array
-  const conflictsByDate: Record<string, string[]> = {};
-  if (conflicts.length > 0) {
-    const d = modifyDate ?? dates[activeIndex];
-    conflictsByDate[d] = conflicts;
-  }
-
   const ranges = slotsToRanges(selectedSlots);
   const formattedDate = formatDateLong(activeDate);
 
@@ -138,7 +135,7 @@ export function TimeSelector({
           dates={dates}
           startHour={startHour}
           endHour={endHour}
-          onConflictsChange={setConflicts}
+          onConflictsChange={setConflictsByDate}
         />
 
         <TimeGrid

@@ -6,6 +6,7 @@ import { TimeBar } from "./time-bar";
 import { TimeList } from "./time-list";
 import { GCalButton } from "./gcal";
 import { slotsToRanges, getDateChipStatus } from "@/lib/time-selector";
+import { formatDateLong } from "@/lib/date-utils";
 
 interface TimeSelectorProps {
   meetingId: string;
@@ -123,15 +124,7 @@ export function TimeSelector({
   const isLastDate = activeIndex === dates.length - 1;
   const isFirstDate = activeIndex === 0;
 
-  const formattedDate = (() => {
-    const d = new Date(activeDate + "T00:00:00");
-    const months = [
-      "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-      "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
-    ];
-    const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-    return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-  })();
+  const formattedDate = formatDateLong(activeDate);
 
   return (
     <div className="ts-wrap" style={{ padding: "28px 24px" }}>

@@ -162,7 +162,7 @@ export function getReviewItems(
 }
 
 export function isDateCompleted(availability: Record<string, string[]>, date: string): boolean {
-  return availability.hasOwnProperty(date);
+  return date in availability;
 }
 
 export function getCompletedCount(availability: Record<string, string[]>, dates: string[]): number {

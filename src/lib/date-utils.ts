@@ -75,11 +75,19 @@ export function timeStrToFloat(str: string): number {
   return h + m / 60;
 }
 
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+  "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+];
+
+const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+
 export function formatDateShort(isoStr: string): string {
   const d = new Date(isoStr + "T00:00:00");
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
-  ];
-  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+export function formatDateLong(isoStr: string): string {
+  const d = new Date(isoStr + "T00:00:00");
+  return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }

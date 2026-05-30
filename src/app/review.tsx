@@ -1,17 +1,13 @@
 "use client";
 
 import type { ReviewItem } from "@/lib/wizard";
+import { formatDateLong } from "@/lib/date-utils";
 
-const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-  "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
-];
-const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-}
+const STATUS_STYLE = {
+  filled: { background: "var(--green-pale)", color: "var(--green)" },
+  skipped: { background: "#fff7e6", color: "#d97706" },
+  pending: { background: "#fafafa", color: "var(--muted)" },
+} as const;
 
 interface ReviewProps {
   items: ReviewItem[];
@@ -56,12 +52,7 @@ export function Review({ items, displayName, onEdit, onSave, saving, error }: Re
                 padding: "12px 14px",
                 borderRadius: 8,
                 border: "1px solid var(--border)",
-                background:
-                  item.status === "filled"
-                    ? "var(--green-pale)"
-                    : item.status === "skipped"
-                      ? "#fff7e6"
-                      : "#fafafa",
+                background: STATUS_STYLE[item.status].background,
               }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -73,18 +64,13 @@ export function Review({ items, displayName, onEdit, onSave, saving, error }: Re
                     marginBottom: 2,
                   }}
                 >
-                  {formatDate(item.date)}
+                  {formatDateLong(item.date)}
                 </div>
                 <div
                   style={{
                     fontSize: 13,
                     fontFamily: "var(--font-mono)",
-                    color:
-                      item.status === "filled"
-                        ? "var(--green)"
-                        : item.status === "skipped"
-                          ? "#d97706"
-                          : "var(--muted)",
+                    color: STATUS_STYLE[item.status].color,
                   }}
                 >
                   {item.status === "filled" && item.ranges.length > 0

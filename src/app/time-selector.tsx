@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { DateChips } from "./date-chips";
 import { TimeGrid } from "./time-grid";
 import { GCalButton } from "./gcal";
 import { TutorialOverlay } from "./tutorial-overlay";
@@ -121,15 +120,6 @@ export function TimeSelector({
         <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 20 }}>
           {modifyDate ? formattedDate : "Klik dan seret pada grid untuk memilih waktu"}
         </p>
-
-        {!modifyDate && (
-          <DateChips
-            dates={dates}
-            availability={availability}
-            activeDate={activeDate}
-            onDateChange={handleDateChipClick}
-          />
-        )}
 
         <GCalButton
           dates={dates}

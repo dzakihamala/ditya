@@ -7,7 +7,7 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { TimeSelector } from "./time-selector";
 import { Review } from "./review";
 import { DateChips } from "./date-chips";
-import { GCalButton, GCalConflictPanel } from "./gcal";
+import { GCalButton } from "./gcal";
 import { formatDateLong } from "@/lib/date-utils";
 import { useToast } from "@/lib/use-toast";
 import {
@@ -176,24 +176,17 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
   }, []);
 
   const handleGcalEventsFetched = useCallback((events: GCalEvent[]) => {
-    dispatch({ type: "GCAL_EVENTS_LOADED", events });
-  }, []);
-
-  const handleGcalConflictsConfirmed = useCallback(
-    (selectedEvents: GCalEvent[]) => {
-      dispatch({
-        type: "GCAL_CONFLICTS_CONFIRMED",
-        conflictsByDate: getConflictsByDate(
-          selectedEvents,
-          wizard.dates,
-          wizard.startHour,
-          wizard.endHour,
-        ),
-        selectedEvents,
-      });
-    },
-    [wizard.dates, wizard.startHour, wizard.endHour],
-  );
+    dispatch({
+      type: "GCAL_CONFLICTS_CONFIRMED",
+      conflictsByDate: getConflictsByDate(
+        events,
+        wizard.dates,
+        wizard.startHour,
+        wizard.endHour,
+      ),
+      selectedEvents: events,
+    });
+  }, [wizard.dates, wizard.startHour, wizard.endHour]);
 
   const handleSaveSlot = useCallback(
     async (date: string, slots: string[]) => {
@@ -366,15 +359,6 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
     );
   }
 
-  if (wizard.step === "gcal-conflicts") {
-    return (
-      <GCalConflictPanel
-        events={wizard.gcalEvents}
-        dates={wizard.dates}
-        onConfirm={handleGcalConflictsConfirmed}
-      />
-    );
-  }
 
   if (wizard.step === "gcal") {
     return (

@@ -21,6 +21,14 @@ export function add30Minutes(time: string): string {
   return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
 }
 
+export function subtract30Minutes(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  const total = h * 60 + m - MINS_PER_SLOT;
+  const nh = ((Math.floor(total / 60) % 24) + 24) % 24;
+  const nm = ((total % 60) + 60) % 60;
+  return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+}
+
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
   return h * 60 + m;

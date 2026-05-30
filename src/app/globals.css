@@ -826,15 +826,23 @@ body {
 .time-bar {
   user-select: none;
   margin-top: 4px;
+  position: relative;
 }
 
 .time-bar-labels {
-  display: flex;
-  justify-content: space-between;
+  position: relative;
+  height: 22px;
   padding: 0 0 6px;
   font-size: 11px;
   color: var(--muted);
   font-family: var(--font-mono);
+}
+
+.time-bar-label-item {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  top: 0;
 }
 
 .time-bar-track {
@@ -843,7 +851,7 @@ body {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
 }
 
@@ -852,14 +860,6 @@ body {
   border-right: 1px solid transparent;
   cursor: pointer;
   transition: background 0.08s;
-}
-
-.time-bar-slot.hour-mark {
-  border-right-color: var(--border-2);
-}
-
-.time-bar-slot.half-mark {
-  border-right-color: var(--border);
 }
 
 .time-bar-slot.sel {
@@ -879,6 +879,32 @@ body {
 .time-bar-slot.conflict.sel {
   background: var(--green);
   opacity: 0.7;
+}
+
+.time-bar-hour-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-2);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.time-bar-hover-tooltip {
+  position: absolute;
+  background: var(--text);
+  color: #fff;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+  transform: translate(-50%, -100%);
+  margin-top: -8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .time-bar-legend {
@@ -914,8 +940,60 @@ body {
   );
 }
 
-/* ─── Mobile Tap List ─── */
-.time-list {
+/* ─── Mobile Range Picker ─── */
+.trp-wrap {
+  margin-top: 12px;
+}
+
+.trp-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.trp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.trp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--green-pale);
+  color: var(--green-dark);
+  border: 1px solid var(--green);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.trp-chip:hover {
+  background: #fde8e8;
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.trp-chip.conflict {
+  border-style: dashed;
+  border-color: var(--accent);
+}
+
+.trp-chip-x {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.trp-chip:hover .trp-chip-x {
+  color: var(--red);
+}
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1050,8 +1128,8 @@ body {
   display: block;
 }
 
-/* Mobile tap list (default hidden) */
-.time-list-wrap {
+/* Mobile range picker (default hidden) */
+.trp-wrap {
   display: none;
 }
 
@@ -1081,13 +1159,13 @@ body {
   }
 }
 
-/* Time Selector responsive: show mobile list, hide desktop bar below 768px */
+/* Time Selector responsive: show mobile picker, hide desktop bar below 768px */
 @media (max-width: 768px) {
   .time-bar {
     display: none;
   }
 
-  .time-list-wrap {
+  .trp-wrap {
     display: block;
   }
 }

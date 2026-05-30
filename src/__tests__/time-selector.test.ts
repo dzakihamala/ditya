@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   generateSlots,
   add30Minutes,
+  subtract30Minutes,
   timeToPixel,
   pixelToTime,
   toggleSlot,
@@ -52,6 +53,20 @@ describe("add30Minutes", () => {
 
   it("handles hour boundary at midnight", () => {
     expect(add30Minutes("23:30")).toBe("00:00");
+  });
+});
+
+describe("subtract30Minutes", () => {
+  it("subtracts 30 minutes within same hour", () => {
+    expect(subtract30Minutes("08:30")).toBe("08:00");
+  });
+
+  it("carries back to previous hour", () => {
+    expect(subtract30Minutes("09:00")).toBe("08:30");
+  });
+
+  it("handles hour boundary at midnight", () => {
+    expect(subtract30Minutes("00:00")).toBe("23:30");
   });
 });
 

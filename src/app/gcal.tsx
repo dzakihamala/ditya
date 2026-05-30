@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { getConflictsByDate, type GCalEvent } from "@/lib/time-selector";
+import { getConflictsByDate, parseGCalInstant, type GCalEvent } from "@/lib/time-selector";
 import { formatDateLong } from "@/lib/date-utils";
 
 interface GCalButtonProps {
@@ -28,13 +28,6 @@ const CHECKMARK_SVG = (
     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 14.17l6.59-6.59L19 9l-8 8z" />
   </svg>
 );
-
-function parseGCalInstant(iso: string): Date {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
-    return new Date(iso + "T00:00:00");
-  }
-  return new Date(iso);
-}
 
 function eventOverlapsDates(event: GCalEvent, dates: string[]): boolean {
   const eventStart = parseGCalInstant(event.start);

@@ -138,47 +138,27 @@ function Calendar({
   );
 }
 
-function TimePicker({
+function TimeUnitSelect({
   value,
+  count,
   onChange,
-  label,
 }: {
   value: number;
+  count: number;
   onChange: (v: number) => void;
-  label: string;
 }) {
-  const h = Math.floor(value);
-  const m = Math.round((value - h) * 60);
-
   return (
-    <div className="time-picker">
-      <span className="time-picker-label">{label}</span>
-      <div className="time-picker-selects">
-        <select
-          className="input time-select"
-          value={h}
-          onChange={(e) => onChange(Number(e.target.value) + m / 60)}
-        >
-          {Array.from({ length: 24 }, (_, i) => (
-            <option key={i} value={i}>
-              {String(i).padStart(2, "0")}
-            </option>
-          ))}
-        </select>
-        <span className="time-sep">:</span>
-        <select
-          className="input time-select"
-          value={m}
-          onChange={(e) => onChange(h + Number(e.target.value) / 60)}
-        >
-          {Array.from({ length: 60 }, (_, i) => (
-            <option key={i} value={i}>
-              {String(i).padStart(2, "0")}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
+    <select
+      className="input time-select"
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+    >
+      {Array.from({ length: count }, (_, i) => (
+        <option key={i} value={i}>
+          {String(i).padStart(2, "0")}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -272,13 +252,24 @@ function EditorContent() {
   return (
     <div className="editor">
       <div className="editor-header">
-        <button
-          className="btn btn-o"
-          onClick={() => router.push("/admin/dashboard")}
-          style={{ fontSize: 12 }}
-        >
-          ← Kembali
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            className="btn btn-o"
+            onClick={() => router.push("/admin/dashboard")}
+            style={{ fontSize: 12 }}
+          >
+            ← Kembali
+          </button>
+          {!isNew && (
+            <button
+              className="btn btn-o"
+              onClick={() => router.push(`/admin/meetings/${meetingId}/analysis`)}
+              style={{ fontSize: 12 }}
+            >
+              Lihat Analisis
+            </button>
+          )}
+        </div>
         <h1 className="editor-title">
           {isNew ? "Rapat Baru" : "Edit Rapat"}
         </h1>
@@ -304,43 +295,57 @@ function EditorContent() {
             </label>
             <Calendar selected={dates} onChange={setDates} />
 
-            {dates.length > 0 && (
-              <div className="selected-dates">
-                {dates.map((d) => (
-                  <span key={d} className="date-chip">
-                    {d.split("-").reverse().join("/")}
-                    <button
-                      className="date-chip-x"
-                      onClick={() =>
-                        setDates((prev) => prev.filter((x) => x !== d))
-                      }
-                      type="button"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
 
           <div className="editor-col-right">
-            <label className="form-label">Rentang Jam</label>
-            <div className="time-range">
-              <TimePicker
-                label="Jam tersedia dari"
-                value={startHour}
-                onChange={(newStart) => {
+            <label className="form-label">Jam tersedia</label>
+            <div className="time-range-inline">
+              <TimeUnitSelect
+                value={Math.floor(startHour)}
+                count={24}
+                onChange={(h) => {
+                  const m = Math.round((startHour - Math.floor(startHour)) * 60);
+                  const newStart = h + m / 60;
                   setStartHour(newStart);
-                  if (newStart >= endHour) setEndHour(Math.min(newStart + 0.5, 23.98));
+                  if (newStart >= endHour) setEndHour(Math.min(newStart + 0.5, 23 + 59 / 60));
+                }}
+              />
+              <span className="time-sep">:</span>
+              <TimeUnitSelect
+                value={Math.round((startHour - Math.floor(startHour)) * 60)}
+                count={60}
+                onChange={(m) => {
+                  const newStart = Math.floor(startHour) + m / 60;
+                  setStartHour(newStart);
+                  if (newStart >= endHour) setEndHour(Math.min(newStart + 0.5, 23 + 59 / 60));
                 }}
               />
               <span className="time-range-dash">—</span>
-              <TimePicker
-                label="sampai"
-                value={endHour}
-                onChange={(newEnd) => {
+              <TimeUnitSelect
+                value={Math.floor(endHour)}
+                count={24}
+                onChange={(h) => {
+                  const m = Math.round((endHour - Math.floor(endHour)) * 60);
+                  const newEnd = h + m / 60;
                   if (newEnd > startHour) setEndHour(newEnd);
+                }}
+              />
+              <span className="time-sep">:</span>
+              <TimeUnitSelect
+                value={Math.round((endHour - Math.floor(endHour)) * 60)}
+                count={60}
+                onChange={(m) => {
+                  const newEnd = Math.floor(endHour) + m / 60;
+                  if (newEnd > startHour) setEndHour(newEnd);
+                }}
+              />
+            </div>
+            <div className="time-preview-bar">
+              <div
+                className="time-preview-fill"
+                style={{
+                  left: `${(startHour / 24) * 100}%`,
+                  width: `${((endHour - startHour) / 24) * 100}%`,
                 }}
               />
             </div>

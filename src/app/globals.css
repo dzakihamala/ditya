@@ -774,6 +774,30 @@ body {
   margin-top: 8px;
 }
 
+.time-range-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.time-preview-bar {
+  position: relative;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.time-preview-fill {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: var(--green);
+  border-radius: 4px;
+  transition: left 0.15s, width 0.15s;
+}
+
 /* Broadcast link */
 .broadcast-row {
   display: flex;

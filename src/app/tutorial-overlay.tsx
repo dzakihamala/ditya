@@ -24,19 +24,23 @@ const STEPS = [
   },
 ] as const;
 
-function TutorialVisual({ visual }: { visual: string }) {
+const MINI_GRID = (
+  <div className="tut-mini-grid">
+    <div className="tut-mini-time">08:00</div>
+    <div className="tut-mini-slot tut-mini-empty" />
+    <div className="tut-mini-time">08:30</div>
+    <div className="tut-mini-slot tut-mini-empty" />
+    <div className="tut-mini-time">09:00</div>
+    <div className="tut-mini-slot tut-mini-empty" />
+  </div>
+);
+
+function TutorialVisual({ visual }: { visual: "create" | "resize" | "move" }) {
   return (
     <div className="tut-visual">
       {visual === "create" && (
         <div className="tut-visual-create">
-          <div className="tut-mini-grid">
-            <div className="tut-mini-time">08:00</div>
-            <div className="tut-mini-slot tut-mini-empty" />
-            <div className="tut-mini-time">08:30</div>
-            <div className="tut-mini-slot tut-mini-empty" />
-            <div className="tut-mini-time">09:00</div>
-            <div className="tut-mini-slot tut-mini-empty" />
-          </div>
+          {MINI_GRID}
           <div className="tut-cursor" />
           <div className="tut-created-block" />
         </div>
@@ -44,14 +48,7 @@ function TutorialVisual({ visual }: { visual: string }) {
 
       {visual === "resize" && (
         <div className="tut-visual-resize">
-          <div className="tut-mini-grid">
-            <div className="tut-mini-time">08:00</div>
-            <div className="tut-mini-slot tut-mini-empty" />
-            <div className="tut-mini-time">08:30</div>
-            <div className="tut-mini-slot tut-mini-empty" />
-            <div className="tut-mini-time">09:00</div>
-            <div className="tut-mini-slot tut-mini-empty" />
-          </div>
+          {MINI_GRID}
           <div className="tut-block-base" />
           <div className="tut-resize-arrow tut-resize-arrow-down" />
         </div>
@@ -59,14 +56,7 @@ function TutorialVisual({ visual }: { visual: string }) {
 
       {visual === "move" && (
         <div className="tut-visual-move">
-          <div className="tut-mini-grid">
-            <div className="tut-mini-time">08:00</div>
-            <div className="tut-mini-slot tut-mini-empty" />
-            <div className="tut-mini-time">08:30</div>
-            <div className="tut-mini-slot tut-mini-empty" />
-            <div className="tut-mini-time">09:00</div>
-            <div className="tut-mini-slot tut-mini-empty" />
-          </div>
+          {MINI_GRID}
           <div className="tut-block-base tut-block-moved" />
           <div className="tut-move-arrow" />
         </div>

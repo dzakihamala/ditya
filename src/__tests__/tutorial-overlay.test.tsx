@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, fireEvent, act } from "@testing-library/react";
+import { describe, it, expect, beforeEach } from "vitest";
+import { render, fireEvent } from "@testing-library/react";
 import { TutorialOverlay } from "@/app/tutorial-overlay";
 
 const STORAGE_KEY = "tutorial-seen";
@@ -41,7 +41,7 @@ describe("TutorialOverlay", () => {
     });
 
     it("shows Selesai button on step 3 instead of Lanjut", () => {
-      const { getByText } = render(
+      const { getByText, queryByText } = render(
         <TutorialOverlay storageKey={STORAGE_KEY} />,
       );
 
@@ -49,7 +49,7 @@ describe("TutorialOverlay", () => {
       fireEvent.click(getByText("Lanjut"));
       fireEvent.click(getByText("Lanjut"));
 
-      expect(() => getByText("Lanjut")).toThrow();
+      expect(queryByText("Lanjut")).toBeNull();
       expect(getByText("Selesai")).toBeTruthy();
     });
   });

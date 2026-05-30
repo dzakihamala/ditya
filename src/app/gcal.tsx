@@ -114,7 +114,7 @@ export function GCalButton({
       return;
     }
 
-    if (!window.gapi) {
+    if (!window.gapi || !window.google?.accounts?.oauth2) {
       setError(
         "Google Calendar belum tersedia. Tunggu beberapa saat dan coba lagi.",
       );
@@ -140,10 +140,8 @@ export function GCalButton({
               return;
             }
             await fetchEvents(resp.access_token);
-            if (!onEventsFetched) {
-              setConnected(true);
-              setLoading(false);
-            }
+            setConnected(true);
+            setLoading(false);
           },
         });
 

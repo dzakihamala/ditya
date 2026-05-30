@@ -22,7 +22,7 @@ vi.mock("firebase/firestore", () => ({
 }));
 
 import { render, fireEvent } from "@testing-library/react";
-import { Recommendations } from "@/app/admin/meetings/[id]/analysis/page";
+import { Recommendations } from "@/app/admin/meetings/[id]/analysis/recommendations";
 import type { ContiguousBlock } from "@/lib/analysis";
 
 function makeBlock(overrides: Partial<ContiguousBlock> = {}): ContiguousBlock {

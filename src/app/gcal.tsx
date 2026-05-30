@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { getConflictsByDate, type GCalEvent } from "@/lib/time-selector";
 import { formatDateLong } from "@/lib/date-utils";
 
@@ -60,6 +60,14 @@ export function GCalButton({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gapiReady, setGapiReady] = useState(false);
+  const connectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
+    };
+  }, []);
 
   // Pre-load gapi client on mount so the OAuth popup is triggered
   // synchronously from the click handler (browsers block async popups).
@@ -155,25 +163,50 @@ export function GCalButton({
     setLoading(true);
     setError(null);
 
+    // Timeout: if callback isn't called within 2 minutes (e.g. user closed popup),
+    // reset loading state so the button isn't stuck.
+    connectTimeoutRef.current = setTimeout(() => {
+      setLoading(false);
+      setError("Waktu menghubungkan habis. Coba lagi.");
+    }, 120_000);
+
     try {
       const tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
         callback: async (resp: TokenResponse) => {
+          if (connectTimeoutRef.current) {
+            clearTimeout(connectTimeoutRef.current);
+            connectTimeoutRef.current = null;
+          }
+
           if (resp.error) {
-            setError("Gagal menghubungkan Google Calendar.");
+            if (resp.error === "access_denied" || resp.error === "user_cancelled") {
+              setError("Kamu menolak akses. Coba lagi jika ingin menghubungkan.");
+            } else {
+              setError("Gagal menghubungkan Google Calendar. Coba lagi.");
+            }
             setLoading(false);
             return;
           }
-          await fetchEvents(resp.access_token);
-          setConnected(true);
-          setLoading(false);
+          try {
+            await fetchEvents(resp.access_token);
+            setConnected(true);
+            setLoading(false);
+          } catch {
+            setError("Gagal mengambil data kalender. Coba lagi.");
+            setLoading(false);
+          }
         },
       });
 
       tokenClient.requestAccessToken();
     } catch {
-      setError("Gagal menginisialisasi Google API.");
+      if (connectTimeoutRef.current) {
+        clearTimeout(connectTimeoutRef.current);
+        connectTimeoutRef.current = null;
+      }
+      setError("Gagal menghubungkan. Coba lagi.");
       setLoading(false);
     }
   }, [fetchEvents, gapiReady]);

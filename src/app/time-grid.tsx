@@ -568,6 +568,9 @@ export function TimeGrid({
           )}
         </div>
       </div>
+      <div className="tg-hint-static">
+        Tekan untuk buat blok &middot; Geser ujung untuk atur durasi &middot; Drag tengah untuk pindahkan
+      </div>
     </div>
   );
 }

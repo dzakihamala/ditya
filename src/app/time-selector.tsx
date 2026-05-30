@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { DateChips } from "./date-chips";
 import { TimeGrid } from "./time-grid";
 import { GCalButton } from "./gcal";
+import { TutorialOverlay } from "./tutorial-overlay";
 import { slotsToRanges, getDateChipStatus } from "@/lib/time-selector";
 import { formatDateLong } from "@/lib/date-utils";
 
@@ -108,7 +109,7 @@ export function TimeSelector({
 
   return (
     <div className="ts-wrap" style={{ padding: "28px 24px" }}>
-      <div className="card" style={{ padding: "32px" }}>
+      <div className="card" style={{ padding: "32px", position: "relative" }}>
         <div className="card-badge">Langkah 2 — Ketersediaan</div>
         <h1
           style={{
@@ -190,6 +191,8 @@ export function TimeSelector({
             </button>
           </div>
         )}
+
+        {!modifyDate && <TutorialOverlay storageKey="tutorial-seen" />}
       </div>
     </div>
   );

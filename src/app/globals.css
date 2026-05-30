@@ -2059,3 +2059,236 @@ body {
     display: none;
   }
 }
+
+/* ─── Tutorial Overlay ─── */
+
+.tut-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(74, 64, 48, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 14px;
+  animation: fadeIn 0.2s ease;
+}
+
+.tut-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px 24px 24px;
+  max-width: 360px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.tut-visual {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+  position: relative;
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tut-mini-grid {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  grid-template-rows: repeat(3, 20px);
+  gap: 2px 6px;
+  width: 100%;
+}
+
+.tut-mini-time {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.tut-mini-slot {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.tut-mini-empty {
+  opacity: 0.6;
+}
+
+/* Step 1: create visual */
+.tut-visual-create {
+  position: relative;
+  width: 100%;
+}
+
+.tut-cursor {
+  position: absolute;
+  top: 38px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  background: var(--text);
+  border-radius: 2px 50% 50% 50%;
+  transform: rotate(-30deg);
+  animation: cursorTap 1.5s ease infinite;
+}
+
+.tut-created-block {
+  position: absolute;
+  top: 22px;
+  right: 20px;
+  width: 60px;
+  height: 36px;
+  background: var(--green);
+  border-radius: 4px;
+  opacity: 0.7;
+  animation: blockAppear 1.5s ease infinite;
+}
+
+@keyframes cursorTap {
+  0%, 100% { transform: rotate(-30deg) scale(1); }
+  50% { transform: rotate(-30deg) scale(0.8); }
+}
+
+@keyframes blockAppear {
+  0%, 50% { opacity: 0; transform: scaleY(0); }
+  70%, 100% { opacity: 0.7; transform: scaleY(1); }
+}
+
+/* Step 2: resize visual */
+.tut-visual-resize {
+  position: relative;
+  width: 100%;
+}
+
+.tut-block-base {
+  position: absolute;
+  top: 22px;
+  right: 20px;
+  width: 60px;
+  height: 36px;
+  background: var(--green);
+  border-radius: 4px;
+  opacity: 0.7;
+}
+
+.tut-resize-arrow {
+  position: absolute;
+  right: 28px;
+  width: 24px;
+  height: 24px;
+  border-left: 2px solid var(--text);
+  border-top: 2px solid var(--text);
+}
+
+.tut-resize-arrow-down {
+  top: 54px;
+  transform: rotate(225deg);
+  animation: arrowBob 1.5s ease infinite;
+}
+
+@keyframes arrowBob {
+  0%, 100% { transform: rotate(225deg) translateY(0); }
+  50% { transform: rotate(225deg) translateY(4px); }
+}
+
+/* Step 3: move visual */
+.tut-visual-move {
+  position: relative;
+  width: 100%;
+}
+
+.tut-block-moved {
+  top: 42px !important;
+  animation: blockShift 1.5s ease infinite;
+}
+
+.tut-move-arrow {
+  position: absolute;
+  top: 38px;
+  left: 50%;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  animation: moveHint 1.5s ease infinite;
+}
+
+.tut-move-arrow::after {
+  content: "↕↔";
+}
+
+@keyframes blockShift {
+  0%, 40% { transform: translateY(0); }
+  60%, 100% { transform: translateY(-20px); }
+}
+
+@keyframes moveHint {
+  0%, 40% { opacity: 0; }
+  50%, 90% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.tut-text {
+  margin-bottom: 20px;
+}
+
+.tut-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.tut-subtitle {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.tut-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.tut-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-2);
+  transition: background 0.15s;
+}
+
+.tut-dot.active {
+  background: var(--green);
+}
+
+.tut-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tut-actions .btn {
+  flex: 1;
+}
+
+/* ─── Time Grid Hint ─── */
+
+.tg-hint-static {
+  text-align: center;
+  padding: 8px 0 2px;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  user-select: none;
+}

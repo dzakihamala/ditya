@@ -379,4 +379,39 @@ describe("TimeGrid", () => {
       expect(container.textContent).toContain("hari lagi");
     });
   });
+
+  describe("static hint text", () => {
+    it("always shows hint text below the grid", () => {
+      const { container } = render(
+        <TimeGrid
+          dates={dates}
+          startHour={startHour}
+          endHour={endHour}
+          availability={emptyAvailability}
+          conflicts={{}}
+          onChange={onChange}
+        />,
+      );
+
+      expect(container.textContent).toContain("Tekan untuk buat blok");
+      expect(container.textContent).toContain("Geser ujung untuk atur durasi");
+      expect(container.textContent).toContain("Drag tengah untuk pindahkan");
+    });
+
+    it("uses tg-hint-static class", () => {
+      const { container } = render(
+        <TimeGrid
+          dates={dates}
+          startHour={startHour}
+          endHour={endHour}
+          availability={emptyAvailability}
+          conflicts={{}}
+          onChange={onChange}
+        />,
+      );
+
+      const hint = container.querySelector(".tg-hint-static");
+      expect(hint).toBeTruthy();
+    });
+  });
 });

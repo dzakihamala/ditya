@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { db } from "@/lib/firebase";
 import { getMeetings, deleteMeeting } from "@/lib/meetings";
 import { floatToTimeStr, formatDateShort } from "@/lib/date-utils";
+import { useToast } from "@/lib/use-toast";
 import type { Meeting } from "@/lib/types";
 
 function ConfirmDialog({
@@ -48,7 +49,7 @@ function MeetingCard({
   onAnalyze: (id: string) => void;
   onNavigate: (id: string) => void;
 }) {
-  const [toast, setToast] = useState<string | null>(null);
+  const { toast, showToast } = useToast();
 
   const baseUrl =
     typeof window !== "undefined"
@@ -60,15 +61,9 @@ function MeetingCard({
   const copyLink = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigator.clipboard.writeText(link).then(() => {
-      setToast("Link undangan tersalin!");
+      showToast("Link undangan tersalin!");
     }).catch(() => {});
   };
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(timer);
-  }, [toast]);
 
   let dateLabel: string;
   if (meeting.dates.length === 0) {

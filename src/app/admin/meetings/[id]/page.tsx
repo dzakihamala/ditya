@@ -14,6 +14,7 @@ import {
   toggleDate,
   selectDateRange,
 } from "@/lib/date-utils";
+import { useToast } from "@/lib/use-toast";
 
 const MONTHS = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -194,7 +195,7 @@ function EditorContent() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [loaded, setLoaded] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const { toast, showToast } = useToast();
 
   useEffect(() => {
     if (!meetingId) {
@@ -253,15 +254,9 @@ function EditorContent() {
   const copyLink = () => {
     if (!broadcastLink) return;
     navigator.clipboard.writeText(broadcastLink).then(() => {
-      setToast("Link undangan tersalin!");
+      showToast("Link undangan tersalin!");
     }).catch(() => {});
   };
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(timer);
-  }, [toast]);
 
   if (!loaded) {
     return (

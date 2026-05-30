@@ -87,6 +87,8 @@ export function GCalButton({
         if (cancelled) return;
         try {
           await window.gapi.client.init({ apiKey: API_KEY });
+          // Load Calendar API — required for events.list
+          await window.gapi.client.load("calendar", "v3");
           setGapiReady(true);
         } catch {
           // Will show error when user clicks connect

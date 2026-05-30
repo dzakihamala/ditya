@@ -33,13 +33,6 @@ ENV PATH="/home/agent/.local/bin:$PATH"
 
 WORKDIR /home/agent
 
-# --- Pre-install project dependencies ---
-# Copy package files first (Docker layer caching: only re-installs when these change)
-# node_modules installed at /home/agent/node_modules (not workspace) because
-# workspace gets bind-mounted over at container start.
-COPY --chown=agent:agent package.json package-lock.json* ./
-RUN npm install
-
 # In worktree sandbox mode, Sandcastle bind-mounts the git worktree at /home/agent/workspace
 # and overrides the working directory to /home/agent/workspace at container start.
 # Structure your Dockerfile so that /home/agent/workspace can serve as the project root.

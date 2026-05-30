@@ -138,6 +138,30 @@ function Calendar({
   );
 }
 
+function TimeUnitSelect({
+  value,
+  count,
+  onChange,
+}: {
+  value: number;
+  count: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <select
+      className="input time-select"
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+    >
+      {Array.from({ length: count }, (_, i) => (
+        <option key={i} value={i}>
+          {String(i).padStart(2, "0")}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function EditorContent() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -276,73 +300,45 @@ function EditorContent() {
           <div className="editor-col-right">
             <label className="form-label">Jam tersedia</label>
             <div className="time-range-inline">
-              <select
-                className="input time-select"
+              <TimeUnitSelect
                 value={Math.floor(startHour)}
-                onChange={(e) => {
-                  const h = Number(e.target.value);
+                count={24}
+                onChange={(h) => {
                   const m = Math.round((startHour - Math.floor(startHour)) * 60);
                   const newStart = h + m / 60;
                   setStartHour(newStart);
-                  if (newStart >= endHour) setEndHour(Math.min(newStart + 0.5, 23.98));
+                  if (newStart >= endHour) setEndHour(Math.min(newStart + 0.5, 23 + 59 / 60));
                 }}
-              >
-                {Array.from({ length: 24 }, (_, i) => (
-                  <option key={i} value={i}>
-                    {String(i).padStart(2, "0")}
-                  </option>
-                ))}
-              </select>
+              />
               <span className="time-sep">:</span>
-              <select
-                className="input time-select"
+              <TimeUnitSelect
                 value={Math.round((startHour - Math.floor(startHour)) * 60)}
-                onChange={(e) => {
-                  const h = Math.floor(startHour);
-                  const newStart = h + Number(e.target.value) / 60;
+                count={60}
+                onChange={(m) => {
+                  const newStart = Math.floor(startHour) + m / 60;
                   setStartHour(newStart);
-                  if (newStart >= endHour) setEndHour(Math.min(newStart + 0.5, 23.98));
+                  if (newStart >= endHour) setEndHour(Math.min(newStart + 0.5, 23 + 59 / 60));
                 }}
-              >
-                {Array.from({ length: 60 }, (_, i) => (
-                  <option key={i} value={i}>
-                    {String(i).padStart(2, "0")}
-                  </option>
-                ))}
-              </select>
+              />
               <span className="time-range-dash">—</span>
-              <select
-                className="input time-select"
+              <TimeUnitSelect
                 value={Math.floor(endHour)}
-                onChange={(e) => {
-                  const h = Number(e.target.value);
+                count={24}
+                onChange={(h) => {
                   const m = Math.round((endHour - Math.floor(endHour)) * 60);
                   const newEnd = h + m / 60;
                   if (newEnd > startHour) setEndHour(newEnd);
                 }}
-              >
-                {Array.from({ length: 24 }, (_, i) => (
-                  <option key={i} value={i}>
-                    {String(i).padStart(2, "0")}
-                  </option>
-                ))}
-              </select>
+              />
               <span className="time-sep">:</span>
-              <select
-                className="input time-select"
+              <TimeUnitSelect
                 value={Math.round((endHour - Math.floor(endHour)) * 60)}
-                onChange={(e) => {
-                  const h = Math.floor(endHour);
-                  const newEnd = h + Number(e.target.value) / 60;
+                count={60}
+                onChange={(m) => {
+                  const newEnd = Math.floor(endHour) + m / 60;
                   if (newEnd > startHour) setEndHour(newEnd);
                 }}
-              >
-                {Array.from({ length: 60 }, (_, i) => (
-                  <option key={i} value={i}>
-                    {String(i).padStart(2, "0")}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div className="time-preview-bar">
               <div

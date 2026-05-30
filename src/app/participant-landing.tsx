@@ -541,8 +541,6 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
           onGoToReview={inModifyMode ? undefined : handleGoToReview}
           modifyDate={inModifyMode ? wizard.dates[wizard.activeDateIndex] : undefined}
           onModifyDone={inModifyMode ? handleModifyDone : undefined}
-          gcalInitiallyConnected={wizard.gcalConnected}
-          initialConflicts={wizard.conflictSlots}
         />
       </div>
     );

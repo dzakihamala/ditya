@@ -29,9 +29,57 @@ export function subtract30Minutes(time: string): string {
   return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
 }
 
-function timeToMinutes(time: string): number {
+export function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
   return h * 60 + m;
+}
+
+export function gridPixelToSlot(
+  x: number,
+  y: number,
+  colWidth: number,
+  cellHeight: number,
+  dates: string[],
+  startHour: number,
+  endHour: number,
+): { date: string; time: string } | null {
+  const colIndex = Math.floor(x / colWidth);
+  if (colIndex < 0 || colIndex >= dates.length || dates.length === 0) return null;
+  const totalSlots = (endHour - startHour) * (60 / MINS_PER_SLOT);
+  const slotIndex = Math.floor(y / cellHeight);
+  if (slotIndex < 0 || slotIndex >= totalSlots) return null;
+  const minutes = startHour * 60 + slotIndex * MINS_PER_SLOT;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return {
+    date: dates[colIndex],
+    time: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`,
+  };
+}
+
+export function slotIndexToTime(slotIndex: number, startHour: number): string {
+  const minutes = startHour * 60 + slotIndex * MINS_PER_SLOT;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+export interface TimeBlock {
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
+export function getBlocks(availability: Record<string, string[]>, dates: string[]): TimeBlock[] {
+  const blocks: TimeBlock[] = [];
+  for (const date of dates) {
+    const slots = availability[date];
+    if (!slots || slots.length === 0) continue;
+    for (const r of slotsToRanges(slots)) {
+      blocks.push({ date, startTime: r.start, endTime: r.end });
+    }
+  }
+  return blocks;
 }
 
 export function timeToPixel(

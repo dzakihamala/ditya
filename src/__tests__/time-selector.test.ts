@@ -12,6 +12,9 @@ import {
   slotsToRanges,
   getDateChipStatus,
   getConflictingSlots,
+  gridPixelToSlot,
+  slotIndexToTime,
+  getBlocks,
 } from "@/lib/time-selector";
 
 describe("generateSlots", () => {
@@ -339,5 +342,111 @@ describe("getConflictingSlots", () => {
       },
     ];
     expect(getConflictingSlots(events, date, startHour, endHour)).toEqual([]);
+  });
+});
+
+describe("gridPixelToSlot", () => {
+  const dates = ["2026-06-15", "2026-06-16", "2026-06-17"];
+  const COL_WIDTH = 80;
+  const CELL_HEIGHT = 28;
+  const startHour = 8;
+  const endHour = 10;
+
+  it("maps top-left pixel to first date, first slot", () => {
+    const result = gridPixelToSlot(0, 0, COL_WIDTH, CELL_HEIGHT, dates, startHour, endHour);
+    expect(result).toEqual({ date: "2026-06-15", time: "08:00" });
+  });
+
+  it("maps second column to second date", () => {
+    const result = gridPixelToSlot(80, 0, COL_WIDTH, CELL_HEIGHT, dates, startHour, endHour);
+    expect(result).toEqual({ date: "2026-06-16", time: "08:00" });
+  });
+
+  it("maps second row to 08:30", () => {
+    const result = gridPixelToSlot(0, 28, COL_WIDTH, CELL_HEIGHT, dates, startHour, endHour);
+    expect(result).toEqual({ date: "2026-06-15", time: "08:30" });
+  });
+
+  it("returns null for x beyond last column", () => {
+    const result = gridPixelToSlot(300, 0, COL_WIDTH, CELL_HEIGHT, dates, startHour, endHour);
+    expect(result).toBeNull();
+  });
+
+  it("returns null for negative x", () => {
+    const result = gridPixelToSlot(-10, 0, COL_WIDTH, CELL_HEIGHT, dates, startHour, endHour);
+    expect(result).toBeNull();
+  });
+
+  it("returns null for y beyond last row", () => {
+    const result = gridPixelToSlot(0, 999, COL_WIDTH, CELL_HEIGHT, dates, startHour, endHour);
+    expect(result).toBeNull();
+  });
+
+  it("returns null for negative y", () => {
+    const result = gridPixelToSlot(0, -10, COL_WIDTH, CELL_HEIGHT, dates, startHour, endHour);
+    expect(result).toBeNull();
+  });
+
+  it("returns null for empty dates array", () => {
+    const result = gridPixelToSlot(0, 0, COL_WIDTH, CELL_HEIGHT, [], startHour, endHour);
+    expect(result).toBeNull();
+  });
+
+  it("handles x at the boundary of the last column", () => {
+    const result = gridPixelToSlot(239, 0, COL_WIDTH, CELL_HEIGHT, dates, startHour, endHour);
+    expect(result).toEqual({ date: "2026-06-17", time: "08:00" });
+  });
+});
+
+describe("slotIndexToTime", () => {
+  it("converts slot index 0 at startHour 8 to 08:00", () => {
+    expect(slotIndexToTime(0, 8)).toBe("08:00");
+  });
+
+  it("converts slot index 1 to 08:30", () => {
+    expect(slotIndexToTime(1, 8)).toBe("08:30");
+  });
+
+  it("handles non-integer startHour", () => {
+    expect(slotIndexToTime(0, 7.5)).toBe("07:30");
+  });
+});
+
+describe("getBlocks", () => {
+  const dates = ["2026-06-15", "2026-06-16"];
+
+  it("returns empty array for empty availability", () => {
+    expect(getBlocks({}, dates)).toEqual([]);
+  });
+
+  it("extracts contiguous blocks from availability", () => {
+    const avail = { "2026-06-15": ["08:00", "08:30", "09:00"] };
+    expect(getBlocks(avail, dates)).toEqual([
+      { date: "2026-06-15", startTime: "08:00", endTime: "09:30" },
+    ]);
+  });
+
+  it("extracts multiple blocks across dates", () => {
+    const avail = {
+      "2026-06-15": ["08:00", "08:30"],
+      "2026-06-16": ["12:00", "12:30", "14:00", "14:30"],
+    };
+    expect(getBlocks(avail, dates)).toEqual([
+      { date: "2026-06-15", startTime: "08:00", endTime: "09:00" },
+      { date: "2026-06-16", startTime: "12:00", endTime: "13:00" },
+      { date: "2026-06-16", startTime: "14:00", endTime: "15:00" },
+    ]);
+  });
+
+  it("handles skipped dates (empty array)", () => {
+    const avail = { "2026-06-15": [] };
+    expect(getBlocks(avail, dates)).toEqual([]);
+  });
+
+  it("only returns blocks for dates in the dates array", () => {
+    const avail = { "2026-06-15": ["08:00"], "2026-12-25": ["10:00"] };
+    expect(getBlocks(avail, ["2026-06-15"])).toEqual([
+      { date: "2026-06-15", startTime: "08:00", endTime: "08:30" },
+    ]);
   });
 });

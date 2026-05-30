@@ -2,8 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { DateChips } from "./date-chips";
-import { TimeBar } from "./time-bar";
-import { TimeRangePicker } from "./time-range-picker";
+import { TimeGrid } from "./time-grid";
 import { GCalButton } from "./gcal";
 import { slotsToRanges, getDateChipStatus } from "@/lib/time-selector";
 import { formatDateLong } from "@/lib/date-utils";
@@ -21,8 +20,6 @@ interface TimeSelectorProps {
   onGoToReview?: () => void;
   modifyDate?: string;
   onModifyDone?: () => void;
-  gcalInitiallyConnected?: boolean;
-  initialConflicts?: string[];
 }
 
 export function TimeSelector({
@@ -37,14 +34,13 @@ export function TimeSelector({
   onGoToReview,
   modifyDate,
   onModifyDone,
-  gcalInitiallyConnected,
-  initialConflicts,
 }: TimeSelectorProps) {
   const [availability, setAvailability] = useState<
     Record<string, string[]>
   >(initialAvailability);
 
   const [internalIndex, setInternalIndex] = useState(() => {
+    if (modifyDate) return dates.indexOf(modifyDate);
     const firstPending = dates.findIndex(
       (d) => getDateChipStatus(d, initialAvailability, d) !== "filled",
     );
@@ -61,37 +57,31 @@ export function TimeSelector({
     [controlledIndex],
   );
 
-  const [conflicts, setConflicts] = useState<string[]>(initialConflicts ?? []);
+  const [conflicts, setConflicts] = useState<string[]>([]);
 
-  const activeDate = dates[activeIndex];
+  const activeDate = modifyDate ?? dates[activeIndex];
   const selectedSlots = availability[activeDate] ?? [];
 
-  const handleSlotsChange = useCallback(
-    (slots: string[]) => {
-      setAvailability((prev) => ({
-        ...prev,
-        [activeDate]: slots,
-      }));
-      onSave(activeDate, slots);
+  const handleGridChange = useCallback(
+    (updates: Record<string, string[]>) => {
+      setAvailability((prev) => {
+        const next = { ...prev };
+        for (const [date, slots] of Object.entries(updates)) {
+          next[date] = slots;
+        }
+        return next;
+      });
+      for (const [date, slots] of Object.entries(updates)) {
+        onSave(date, slots);
+      }
     },
-    [activeDate, onSave],
+    [onSave],
   );
 
   const handleSkip = useCallback(() => {
-    setAvailability((prev) => ({
-      ...prev,
-      [activeDate]: [],
-    }));
+    setAvailability((prev) => ({ ...prev, [activeDate]: [] }));
     onSave(activeDate, []);
-
-    if (activeIndex < dates.length - 1) {
-      const next = activeIndex + 1;
-      setActiveIndex(next);
-      if (controlledDateChange) {
-        controlledDateChange(dates[next]);
-      }
-    }
-  }, [activeDate, activeIndex, dates, onSave, setActiveIndex, controlledDateChange]);
+  }, [activeDate, onSave]);
 
   const handleDateChipClick = useCallback(
     (date: string) => {
@@ -106,30 +96,14 @@ export function TimeSelector({
     [dates, setActiveIndex, controlledDateChange],
   );
 
-  const handleNext = useCallback(() => {
-    if (activeIndex < dates.length - 1) {
-      const next = activeIndex + 1;
-      setActiveIndex(next);
-      if (controlledDateChange) {
-        controlledDateChange(dates[next]);
-      }
-    }
-  }, [activeIndex, dates, setActiveIndex, controlledDateChange]);
-
-  const handlePrev = useCallback(() => {
-    if (activeIndex > 0) {
-      const prev = activeIndex - 1;
-      setActiveIndex(prev);
-      if (controlledDateChange) {
-        controlledDateChange(dates[prev]);
-      }
-    }
-  }, [activeIndex, dates, setActiveIndex, controlledDateChange]);
+  // Build conflicts-per-date map from flat conflicts array
+  const conflictsByDate: Record<string, string[]> = {};
+  if (conflicts.length > 0) {
+    const d = modifyDate ?? dates[activeIndex];
+    conflictsByDate[d] = conflicts;
+  }
 
   const ranges = slotsToRanges(selectedSlots);
-  const isLastDate = activeIndex === dates.length - 1;
-  const isFirstDate = activeIndex === 0;
-
   const formattedDate = formatDateLong(activeDate);
 
   return (
@@ -147,7 +121,7 @@ export function TimeSelector({
           Pilih waktu Anda
         </h1>
         <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 20 }}>
-          {formattedDate}
+          {modifyDate ? formattedDate : "Klik dan seret pada grid untuk memilih waktu"}
         </p>
 
         {!modifyDate && (
@@ -164,23 +138,15 @@ export function TimeSelector({
           startHour={startHour}
           endHour={endHour}
           onConflictsChange={setConflicts}
-          initialConnected={gcalInitiallyConnected}
         />
 
-        <TimeBar
-          selectedSlots={selectedSlots}
+        <TimeGrid
+          dates={modifyDate ? [modifyDate] : dates}
           startHour={startHour}
           endHour={endHour}
-          conflicts={conflicts}
-          onChange={handleSlotsChange}
-        />
-
-        <TimeRangePicker
-          selectedSlots={selectedSlots}
-          startHour={startHour}
-          endHour={endHour}
-          conflicts={conflicts}
-          onChange={handleSlotsChange}
+          availability={availability}
+          conflicts={conflictsByDate}
+          onChange={handleGridChange}
         />
 
         {ranges.length > 0 && (
@@ -215,26 +181,13 @@ export function TimeSelector({
             </button>
           </div>
         ) : (
-          <div className="ts-nav-row">
+          <div className="ts-nav-row" style={{ justifyContent: "flex-end" }}>
             <button
-              className="btn btn-o"
-              onClick={handlePrev}
-              disabled={isFirstDate}
+              className="btn btn-p"
+              onClick={onGoToReview ?? onNext}
             >
-              ← Sebelumnya
+              Review →
             </button>
-            {isLastDate ? (
-              <button
-                className="btn btn-p"
-                onClick={onGoToReview ?? onNext}
-              >
-                Review →
-              </button>
-            ) : (
-              <button className="btn btn-p" onClick={handleNext}>
-                Lanjut →
-              </button>
-            )}
           </div>
         )}
       </div>

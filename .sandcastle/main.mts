@@ -46,12 +46,14 @@ const MAX_ITERATIONS = 10;
 // Hooks run inside the sandbox before the agent starts each iteration.
 // npm install ensures the sandbox always has fresh dependencies.
 const hooks = {
-  sandbox: { onSandboxReady: [{ command: "npm install" }] },
+  sandbox: { onSandboxReady: [{ command: "npm install --prefer-offline" }] },
 };
 
-// Windows doesn't have cp, and npm install runs in the sandbox hook anyway.
-// Skipping copyToWorktree to avoid cp ENOENT on Windows.
-const copyToWorktree = [];
+// Copy node_modules from host to worktree before each sandbox starts.
+// Avoids a full npm install from scratch; the hook above handles
+// platform-specific binaries and any packages added since the last copy.
+// Note: cp.cmd wrapper installed at ~/bin/cp.cmd for Windows compatibility.
+const copyToWorktree = ["node_modules"];
 
 // ---------------------------------------------------------------------------
 // Main loop

@@ -813,8 +813,8 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 14px;
-  overflow-x: auto;
-  white-space: nowrap;
+  overflow-wrap: break-word;
+  word-break: break-all;
   font-family: var(--font-mono);
   color: var(--muted);
 }

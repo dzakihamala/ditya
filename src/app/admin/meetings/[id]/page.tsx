@@ -175,6 +175,7 @@ function EditorContent() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [createToastVisible, setCreateToastVisible] = useState(false);
   const { toast, showToast } = useToast();
 
   useEffect(() => {
@@ -198,6 +199,15 @@ function EditorContent() {
     };
   }, [meetingId]);
 
+  useEffect(() => {
+    if (!loaded || !meetingId) return;
+    const createdId = sessionStorage.getItem("createdMeetingId");
+    if (createdId === meetingId) {
+      sessionStorage.removeItem("createdMeetingId");
+      setCreateToastVisible(true);
+    }
+  }, [loaded, meetingId]);
+
   const valid =
     name.trim().length > 0 && dates.length > 0 && endHour > startHour;
 
@@ -214,9 +224,11 @@ function EditorContent() {
       };
       if (isNew) {
         const id = await createMeeting(db, data);
+        sessionStorage.setItem("createdMeetingId", id);
         router.push(`/admin/meetings/${id}`);
       } else {
         await updateMeeting(db, meetingId!, data);
+        showToast("Perubahan disimpan.");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan.");
@@ -260,15 +272,6 @@ function EditorContent() {
           >
             ← Kembali
           </button>
-          {!isNew && (
-            <button
-              className="btn btn-o"
-              onClick={() => router.push(`/admin/meetings/${meetingId}/analysis`)}
-              style={{ fontSize: 12 }}
-            >
-              Lihat Analisis
-            </button>
-          )}
         </div>
         <h1 className="editor-title">
           {isNew ? "Rapat Baru" : "Edit Rapat"}
@@ -374,6 +377,15 @@ function EditorContent() {
             >
               {saving ? "Menyimpan..." : isNew ? "Buat Rapat" : "Simpan Perubahan"}
             </button>
+            {!isNew && meetingId && (
+              <button
+                className="btn btn-o"
+                onClick={() => router.push(`/admin/meetings/${meetingId}/analysis`)}
+                style={{ width: "100%", padding: 12, marginTop: 8, fontSize: 13 }}
+              >
+                Lihat Analisis
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -381,6 +393,24 @@ function EditorContent() {
       {toast && (
         <div className="toast-wrap">
           <div className="toast ok">{toast}</div>
+        </div>
+      )}
+      {createToastVisible && broadcastLink && (
+        <div className="toast-wrap">
+          <div className="toast ok" style={{ flexDirection: "column", alignItems: "flex-start", gap: 8 }}>
+            <span>Rapat berhasil dibuat!</span>
+            <button
+              className="btn btn-p"
+              style={{ fontSize: 12, padding: "6px 14px" }}
+              onClick={() => {
+                navigator.clipboard.writeText(broadcastLink).then(() => {
+                  setCreateToastVisible(false);
+                }).catch(() => {});
+              }}
+            >
+              Salin Link Undangan
+            </button>
+          </div>
         </div>
       )}
     </div>

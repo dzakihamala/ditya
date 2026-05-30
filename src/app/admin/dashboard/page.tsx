@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGuard } from "@/lib/AuthGuard";
 import { useAuth } from "@/lib/AuthContext";
@@ -155,11 +155,21 @@ function DashboardContent() {
     fetchMeetings();
   }, [fetchMeetings]);
 
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const hideToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showDashboardToast = (msg: string) => {
+    if (hideToastRef.current) clearTimeout(hideToastRef.current);
+    setToastMsg(msg);
+    hideToastRef.current = setTimeout(() => setToastMsg(null), 3000);
+  };
+
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
       await deleteMeeting(db, deleteId);
       setMeetings((prev) => prev.filter((m) => m.id !== deleteId));
+      showDashboardToast("Rapat dihapus.");
     } catch {
       // silently handle
     }
@@ -207,6 +217,11 @@ function DashboardContent() {
           onConfirm={handleDelete}
           onCancel={() => setDeleteId(null)}
         />
+      )}
+      {toastMsg && (
+        <div className="toast-wrap">
+          <div className="toast ok">{toastMsg}</div>
+        </div>
       )}
     </div>
   );

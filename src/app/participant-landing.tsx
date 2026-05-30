@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useReducer } from "react";
+import { useState, useEffect, useCallback, useReducer, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { normalizeName, getDeviceInfo, createParticipant, saveParticipantAvailability, saveParticipantDateSlot } from "@/lib/participant";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
@@ -38,6 +38,14 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
   const [showNewNameHint, setShowNewNameHint] = useState(false);
   const [saving, setSaving] = useState(false);
   const [modifyShowPicker, setModifyShowPicker] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const hideToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (msg: string) => {
+    if (hideToastRef.current) clearTimeout(hideToastRef.current);
+    setToastMsg(msg);
+    hideToastRef.current = setTimeout(() => setToastMsg(null), 3000);
+  };
 
   // Load meeting data
   useEffect(() => {
@@ -217,6 +225,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
 
   const handleModifyResetAll = useCallback(() => {
     dispatch({ type: "MODIFY_RESET_ALL" });
+    showToast("Jadwal diatur ulang dari awal.");
   }, []);
 
   const handleModifySaveSlot = useCallback(
@@ -231,6 +240,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
             date,
             slots,
           );
+          showToast("Jadwal berhasil diperbarui.");
         } catch {
           // Firestore save failed silently
         }
@@ -287,8 +297,10 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
 
   const checking = wizard.error === "checking";
 
+  let content: React.ReactNode;
+
   if (wizard.error && wizard.step === "loading" && !checking) {
-    return (
+    content = (
       <div className="wizard-wrap">
         <div className="card" style={{ maxWidth: 440, textAlign: "center" }}>
           <div className="card-badge" style={{ color: "var(--red)" }}>
@@ -304,10 +316,8 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         </div>
       </div>
     );
-  }
-
-  if (wizard.step === "loading") {
-    return (
+  } else if (wizard.step === "loading") {
+    content = (
       <div className="loading" role="status">
         <div className="spinner" />
         <p
@@ -321,11 +331,9 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         </p>
       </div>
     );
-  }
-
-  // ---- STEP 2: GCal opt-in ----
-  if (wizard.step === "gcal") {
-    return (
+  } else if (wizard.step === "gcal") {
+    // ---- STEP 2: GCal opt-in ----
+    content = (
       <div className="wizard-wrap wizard-step" style={{ padding: "28px 24px" }}>
         <div className="card" style={{ maxWidth: 440, padding: "32px" }}>
           <div className="card-badge">Langkah 2 — Kalender</div>
@@ -374,12 +382,10 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         </div>
       </div>
     );
-  }
-
-  // ---- MODIFY STEP: Modify flow entry ----
-  if (wizard.step === "modify") {
+  } else if (wizard.step === "modify") {
+    // ---- MODIFY STEP: Modify flow entry ----
     const items = getReviewItems(wizard.availability, wizard.dates);
-    return (
+    content = (
       <div className="wizard-wrap wizard-step" style={{ padding: "28px 24px" }}>
         <div className="card" style={{ maxWidth: 520, padding: "32px" }}>
           <div className="card-badge">Ubah Jadwal</div>
@@ -484,12 +490,10 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         </div>
       </div>
     );
-  }
-
-  // ---- STEP 3: Select time ----
-  if (wizard.step === "select-time" && wizard.dates.length > 0) {
+  } else if (wizard.step === "select-time" && wizard.dates.length > 0) {
+    // ---- STEP 3: Select time ----
     const inModifyMode = wizard.isModifyMode;
-    return (
+    content = (
       <div className="wizard-step">
         <TimeSelector
           meetingId={meetingId}
@@ -507,12 +511,10 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         />
       </div>
     );
-  }
-
-  // ---- STEP 4: Review ----
-  if (wizard.step === "review") {
+  } else if (wizard.step === "review") {
+    // ---- STEP 4: Review ----
     const items = getReviewItems(wizard.availability, wizard.dates);
-    return (
+    content = (
       <div className="wizard-step">
         <Review
           items={items}
@@ -524,11 +526,9 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         />
       </div>
     );
-  }
-
-  // ---- STEP 5: Thank you ----
-  if (wizard.step === "saved") {
-    return (
+  } else if (wizard.step === "saved") {
+    // ---- STEP 5: Thank you ----
+    content = (
       <div className="wizard-wrap wizard-step">
         <div className="card" style={{ maxWidth: 440, textAlign: "center" }}>
           <div
@@ -572,142 +572,153 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         </div>
       </div>
     );
-  }
+  } else {
+    // ---- STEP 1: Name input ----
+    content = (
+      <div className="wizard-wrap wizard-step">
+        <div className="card" style={{ maxWidth: 440 }}>
+          <div className="card-badge">Langkah 1 — Nama</div>
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 500,
+              marginBottom: 6,
+              color: "var(--text)",
+            }}
+          >
+            {wizard.meetingTitle || "Undangan Rapat"}
+          </h1>
+          <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 24 }}>
+            Silakan masukkan nama Anda untuk melanjutkan.
+          </p>
 
-  // ---- STEP 1: Name input ----
-  return (
-    <div className="wizard-wrap wizard-step">
-      <div className="card" style={{ maxWidth: 440 }}>
-        <div className="card-badge">Langkah 1 — Nama</div>
-        <h1
-          style={{
-            fontSize: 22,
-            fontWeight: 500,
-            marginBottom: 6,
-            color: "var(--text)",
-          }}
-        >
-          {wizard.meetingTitle || "Undangan Rapat"}
-        </h1>
-        <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 24 }}>
-          Silakan masukkan nama Anda untuk melanjutkan.
-        </p>
-
-        {wizard.step === "input" && (
-          <>
-            {!existing ? (
-              <form onSubmit={handleSubmit}>
-                <label className="form-label">Nama Anda</label>
-                <input
-                  className="input"
-                  type="text"
-                  placeholder="Ketik nama lengkap..."
-                  value={name}
-                  onChange={(e) => { setName(e.target.value); setShowNewNameHint(false); }}
-                  autoFocus
-                  required
-                />
-                {wizard.error && wizard.error !== "checking" && (
-                  <div
-                    className="err-box"
-                    style={{ marginTop: 12, marginBottom: 0 }}
-                  >
-                    {wizard.error}
+          {wizard.step === "input" && (
+            <>
+              {!existing ? (
+                <form onSubmit={handleSubmit}>
+                  <label className="form-label">Nama Anda</label>
+                  <input
+                    className="input"
+                    type="text"
+                    placeholder="Ketik nama lengkap..."
+                    value={name}
+                    onChange={(e) => { setName(e.target.value); setShowNewNameHint(false); }}
+                    autoFocus
+                    required
+                  />
+                  {wizard.error && wizard.error !== "checking" && (
+                    <div
+                      className="err-box"
+                      style={{ marginTop: 12, marginBottom: 0 }}
+                    >
+                      {wizard.error}
+                    </div>
+                  )}
+                  <div style={{ marginTop: 16 }}>
+                    <button
+                      className="btn btn-p"
+                      type="submit"
+                      disabled={!name.trim() || checking}
+                      style={{ width: "100%" }}
+                    >
+                      Lanjutkan
+                    </button>
                   </div>
-                )}
-                <div style={{ marginTop: 16 }}>
-                  <button
-                    className="btn btn-p"
-                    type="submit"
-                    disabled={!name.trim() || checking}
-                    style={{ width: "100%" }}
-                  >
-                    Lanjutkan
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div>
-                <div
-                  style={{
-                    background: "var(--green-pale)",
-                    border: "1px solid var(--green)",
-                    borderRadius: 8,
-                    padding: "14px 16px",
-                    marginBottom: 8,
-                  }}
-                >
-                  <p
+                </form>
+              ) : (
+                <div>
+                  <div
                     style={{
-                      fontSize: 14,
-                      color: "var(--text)",
-                      marginBottom: 6,
+                      background: "var(--green-pale)",
+                      border: "1px solid var(--green)",
+                      borderRadius: 8,
+                      padding: "14px 16px",
+                      marginBottom: 8,
                     }}
                   >
-                    Sepertinya <strong>{existing.displayName}</strong> sudah
-                    mengisi pada{" "}
-                    {existing.createdAt
-                      ? new Date(existing.createdAt).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "waktu sebelumnya"}
-                    {" · "}
-                    {existing.deviceInfo.os} · {existing.deviceInfo.browser}
+                    <p
+                      style={{
+                        fontSize: 14,
+                        color: "var(--text)",
+                        marginBottom: 6,
+                      }}
+                    >
+                      Sepertinya <strong>{existing.displayName}</strong> sudah
+                      mengisi pada{" "}
+                      {existing.createdAt
+                        ? new Date(existing.createdAt).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "waktu sebelumnya"}
+                      {" · "}
+                      {existing.deviceInfo.os} · {existing.deviceInfo.browser}
+                    </p>
+                  </div>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: "var(--muted)",
+                      marginBottom: 16,
+                      textAlign: "center",
+                    }}
+                  >
+                    Apakah ini Anda?
+                  </p>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      className="btn btn-p"
+                      onClick={handleYes}
+                      style={{ flex: 1 }}
+                    >
+                      Ya, itu saya
+                    </button>
+                    <button
+                      className="btn btn-o"
+                      onClick={handleNo}
+                      style={{ flex: 1 }}
+                    >
+                      Bukan saya
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {checking && (
+                <div style={{ textAlign: "center", padding: "20px 0" }}>
+                  <div className="spinner" style={{ margin: "0 auto 12px" }} />
+                  <p style={{ fontSize: 13, color: "var(--muted)" }}>
+                    Memeriksa data...
                   </p>
                 </div>
-                <p
-                  style={{
-                    fontSize: 13,
-                    color: "var(--muted)",
-                    marginBottom: 16,
-                    textAlign: "center",
-                  }}
-                >
-                  Apakah ini Anda?
-                </p>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    className="btn btn-p"
-                    onClick={handleYes}
-                    style={{ flex: 1 }}
-                  >
-                    Ya, itu saya
-                  </button>
-                  <button
-                    className="btn btn-o"
-                    onClick={handleNo}
-                    style={{ flex: 1 }}
-                  >
-                    Bukan saya
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
+            </>
+          )}
 
-            {checking && (
-              <div style={{ textAlign: "center", padding: "20px 0" }}>
-                <div className="spinner" style={{ margin: "0 auto 12px" }} />
-                <p style={{ fontSize: 13, color: "var(--muted)" }}>
-                  Memeriksa data...
-                </p>
-              </div>
-            )}
-          </>
-        )}
-
-        {wizard.step === "input" && !existing && showNewNameHint && !checking && (
-          <div
-            className="err-box"
-            style={{ marginTop: 12, marginBottom: 0 }}
-          >
-            Silakan gunakan nama yang berbeda.
-          </div>
-        )}
+          {wizard.step === "input" && !existing && showNewNameHint && !checking && (
+            <div
+              className="err-box"
+              style={{ marginTop: 12, marginBottom: 0 }}
+            >
+              Silakan gunakan nama yang berbeda.
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <>
+      {content}
+      {toastMsg && (
+        <div className="toast-wrap">
+          <div className="toast ok">{toastMsg}</div>
+        </div>
+      )}
+    </>
   );
 }

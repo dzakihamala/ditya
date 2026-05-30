@@ -119,7 +119,11 @@ export function TimeGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const committedRef = useRef(false);
+  const dragMovedRef = useRef(false);
   const [renderDrag, setRenderDrag] = useState<DragState | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    date: string; startTime: string; endTime: string;
+  } | null>(null);
 
   const slots = generateSlots(startHour, endHour);
   const totalRows = slots.length;
@@ -216,9 +220,25 @@ export function TimeGrid({
     setRenderDrag(state);
   }, []);
 
+  const handleDelete = useCallback((date: string, startTime: string, endTime: string) => {
+    const current = availability[date] ?? [];
+    onChange({ [date]: deselectRange(current, startTime, subtract30Minutes(endTime)) });
+    setDeleteTarget(null);
+  }, [availability, onChange]);
+
   const finishDrag = useCallback(() => {
     const ds = dragRef.current;
     if (!ds || committedRef.current) {
+      setDrag(null);
+      return;
+    }
+    if (!dragMovedRef.current && ds.type !== "create") {
+      // Tap on existing block — show delete confirmation
+      setDeleteTarget({
+        date: ds.type === "move" ? ds.origDate : ds.date,
+        startTime: ds.type === "move" ? ds.origStart : ds.blockStart,
+        endTime: ds.blockEnd,
+      });
       setDrag(null);
       return;
     }
@@ -235,7 +255,9 @@ export function TimeGrid({
   const handleGridMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if ((e.target as HTMLElement).closest(".tg-block")) return;
+      setDeleteTarget(null);
       committedRef.current = false;
+      dragMovedRef.current = false;
       const pos = resolveGridPos(e.clientX, e.clientY);
       if (!pos) return;
       const result = gridPixelToSlot(
@@ -256,6 +278,7 @@ export function TimeGrid({
     (e: React.MouseEvent, b: { date: string; startTime: string; endTime: string }) => {
       e.stopPropagation();
       committedRef.current = false;
+      dragMovedRef.current = false;
       const pos = resolveGridPos(e.clientX, e.clientY);
       if (!pos) return;
 
@@ -273,6 +296,7 @@ export function TimeGrid({
     (e: React.MouseEvent) => {
       const ds = dragRef.current;
       if (!ds) return;
+      dragMovedRef.current = true;
       const pos = resolveGridPos(e.clientX, e.clientY);
       if (!pos) return;
       const result = gridPixelToSlot(
@@ -333,6 +357,7 @@ export function TimeGrid({
       if (!touch) return;
       const ds = dragRef.current;
       if (!ds) return;
+      dragMovedRef.current = true;
       const pos = resolveGridPos(touch.clientX, touch.clientY);
       if (!pos) return;
       const result = gridPixelToSlot(
@@ -366,6 +391,7 @@ export function TimeGrid({
       const touch = e.touches[0];
       if (!touch) return;
       committedRef.current = false;
+      dragMovedRef.current = false;
       const pos = resolveGridPos(touch.clientX, touch.clientY);
       if (!pos) return;
 
@@ -473,10 +499,21 @@ export function TimeGrid({
                   endHour,
                 );
                 const hasConflict = blockSlots.some((s) => dateConflicts.includes(s));
+                const isDragging =
+                  renderDrag &&
+                  renderDrag.type !== "create" &&
+                  ((renderDrag.type === "move" &&
+                    b.date === renderDrag.origDate &&
+                    b.startTime === renderDrag.origStart &&
+                    b.endTime === renderDrag.blockEnd) ||
+                   (renderDrag.type === "resize" &&
+                    b.date === renderDrag.date &&
+                    b.startTime === renderDrag.blockStart &&
+                    b.endTime === renderDrag.blockEnd));
                 return (
                   <div
                     key={`block-${i}`}
-                    className={`tg-block${hasConflict ? " has-conflict" : ""}`}
+                    className={`tg-block${hasConflict ? " has-conflict" : ""}${isDragging ? " tg-block-dragging" : ""}`}
                     style={{
                       left: colIdx * COL_WIDTH + BLOCK_PAD,
                       top: topIdx * CELL_HEIGHT + BLOCK_PAD,
@@ -572,8 +609,20 @@ export function TimeGrid({
         </div>
       </div>
       <div className="tg-hint-static">
-        Tekan untuk buat blok &middot; Geser ujung untuk atur durasi &middot; Drag tengah untuk pindahkan
+        Tap untuk buat/hapus blok &middot; Geser ujung untuk atur durasi &middot; Drag tengah untuk pindahkan
       </div>
+
+      {deleteTarget && (
+        <div className="tg-popover-overlay" onClick={() => setDeleteTarget(null)}>
+          <div className="tg-popover" onClick={(e) => e.stopPropagation()}>
+            <p className="tg-popover-text">Hapus blok waktu ini?</p>
+            <div className="tg-popover-actions">
+              <button className="tg-popover-btn tg-popover-btn-hapus" onClick={() => handleDelete(deleteTarget.date, deleteTarget.startTime, deleteTarget.endTime)}>Hapus</button>
+              <button className="tg-popover-btn tg-popover-btn-batal" onClick={() => setDeleteTarget(null)}>Batal</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

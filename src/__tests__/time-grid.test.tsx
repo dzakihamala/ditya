@@ -336,6 +336,176 @@ describe("TimeGrid", () => {
     });
   });
 
+  describe("tap to delete", () => {
+    it("shows delete confirmation on click (no drag) on existing block", () => {
+      const availability = { "2026-06-15": ["08:00", "08:30"] };
+      const { container } = render(
+        <TimeGrid
+          dates={dates}
+          startHour={startHour}
+          endHour={endHour}
+          availability={availability}
+          conflicts={{}}
+          onChange={onChange}
+        />,
+      );
+
+      const block = container.querySelector(".tg-block")!;
+      fireEvent.mouseDown(block, { clientX: 40, clientY: 14 });
+      fireEvent.mouseUp(block, { clientX: 40, clientY: 14 });
+
+      expect(container.textContent).toContain("Hapus blok waktu ini?");
+    });
+
+    it("delete confirmation does not appear when dragging (mousemove fired)", () => {
+      const availability = { "2026-06-15": ["08:00", "08:30"] };
+      const { container } = render(
+        <TimeGrid
+          dates={dates}
+          startHour={startHour}
+          endHour={endHour}
+          availability={availability}
+          conflicts={{}}
+          onChange={onChange}
+        />,
+      );
+
+      const block = container.querySelector(".tg-block")!;
+      const area = container.querySelector(".tg-area")!;
+      fireEvent.mouseDown(block, { clientX: 40, clientY: 14 });
+      fireEvent.mouseMove(area, { clientX: 40, clientY: 70 });
+      fireEvent.mouseUp(area, { clientX: 40, clientY: 70 });
+
+      expect(container.textContent).not.toContain("Hapus blok waktu ini?");
+      // Verify drag was committed instead
+      expect(onChange).toHaveBeenCalled();
+    });
+
+    it("Hapus button removes the block", () => {
+      const availability = { "2026-06-15": ["08:00", "08:30"] };
+      const { container } = render(
+        <TimeGrid
+          dates={dates}
+          startHour={startHour}
+          endHour={endHour}
+          availability={availability}
+          conflicts={{}}
+          onChange={onChange}
+        />,
+      );
+
+      const block = container.querySelector(".tg-block")!;
+      fireEvent.mouseDown(block, { clientX: 40, clientY: 14 });
+      fireEvent.mouseUp(block, { clientX: 40, clientY: 14 });
+
+      const hapusBtn = Array.from(container.querySelectorAll("button")).find(
+        (b) => b.textContent === "Hapus",
+      )!;
+      fireEvent.click(hapusBtn);
+
+      expect(onChange).toHaveBeenCalledWith({
+        "2026-06-15": [],
+      });
+    });
+
+    it("Batal button closes popover without removing block", () => {
+      const availability = { "2026-06-15": ["08:00", "08:30"] };
+      const { container } = render(
+        <TimeGrid
+          dates={dates}
+          startHour={startHour}
+          endHour={endHour}
+          availability={availability}
+          conflicts={{}}
+          onChange={onChange}
+        />,
+      );
+
+      const block = container.querySelector(".tg-block")!;
+      fireEvent.mouseDown(block, { clientX: 40, clientY: 14 });
+      fireEvent.mouseUp(block, { clientX: 40, clientY: 14 });
+
+      const batalBtn = Array.from(container.querySelectorAll("button")).find(
+        (b) => b.textContent === "Batal",
+      )!;
+      fireEvent.click(batalBtn);
+
+      expect(onChange).not.toHaveBeenCalled();
+      expect(container.textContent).not.toContain("Hapus blok waktu ini?");
+    });
+
+    it("clicking outside popover closes it", () => {
+      const availability = { "2026-06-15": ["08:00", "08:30"] };
+      const { container } = render(
+        <TimeGrid
+          dates={dates}
+          startHour={startHour}
+          endHour={endHour}
+          availability={availability}
+          conflicts={{}}
+          onChange={onChange}
+        />,
+      );
+
+      const block = container.querySelector(".tg-block")!;
+      fireEvent.mouseDown(block, { clientX: 40, clientY: 14 });
+      fireEvent.mouseUp(block, { clientX: 40, clientY: 14 });
+
+      // Click on the grid area outside the popover
+      const area = container.querySelector(".tg-area")!;
+      fireEvent.mouseDown(area, { clientX: 60, clientY: 10 });
+
+      expect(container.textContent).not.toContain("Hapus blok waktu ini?");
+    });
+  });
+
+  describe("drag opacity", () => {
+    it("block gets dragging class during move drag", () => {
+      const availability = { "2026-06-15": ["08:00", "08:30"] };
+      const { container } = render(
+        <TimeGrid
+          dates={dates}
+          startHour={startHour}
+          endHour={endHour}
+          availability={availability}
+          conflicts={{}}
+          onChange={onChange}
+        />,
+      );
+
+      const block = container.querySelector(".tg-block")!;
+      const area = container.querySelector(".tg-area")!;
+      fireEvent.mouseDown(block, { clientX: 40, clientY: 14 });
+      fireEvent.mouseMove(area, { clientX: 40, clientY: 42 });
+
+      // After mousemove, the original block should have tg-block-dragging class
+      const draggingBlock = container.querySelector(".tg-block-dragging");
+      expect(draggingBlock).toBeTruthy();
+    });
+
+    it("block has no dragging class after drag completes", () => {
+      const availability = { "2026-06-15": ["08:00", "08:30"] };
+      const { container } = render(
+        <TimeGrid
+          dates={dates}
+          startHour={startHour}
+          endHour={endHour}
+          availability={availability}
+          conflicts={{}}
+          onChange={onChange}
+        />,
+      );
+
+      const block = container.querySelector(".tg-block")!;
+      const area = container.querySelector(".tg-area")!;
+      fireEvent.mouseDown(block, { clientX: 40, clientY: 14 });
+      fireEvent.mouseMove(area, { clientX: 40, clientY: 70 });
+      fireEvent.mouseUp(area, { clientX: 40, clientY: 70 });
+
+      expect(container.querySelector(".tg-block-dragging")).toBeFalsy();
+    });
+  });
+
   describe("hint", () => {
     it("does not show hint when fewer than 4 days filled", () => {
       const availability = {
@@ -393,7 +563,7 @@ describe("TimeGrid", () => {
         />,
       );
 
-      expect(container.textContent).toContain("Tekan untuk buat blok");
+      expect(container.textContent).toContain("Tap untuk buat/hapus blok");
       expect(container.textContent).toContain("Geser ujung untuk atur durasi");
       expect(container.textContent).toContain("Drag tengah untuk pindahkan");
     });

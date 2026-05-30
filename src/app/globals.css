@@ -1428,6 +1428,10 @@ body {
   pointer-events: none;
 }
 
+.tg-block-dragging {
+  opacity: 0.5;
+}
+
 .tg-conflict {
   position: absolute;
   background: rgba(138, 122, 90, 0.2);
@@ -1451,6 +1455,61 @@ body {
 @keyframes tgHintFade {
   0%, 70% { opacity: 1; }
   100% { opacity: 0; }
+}
+
+.tg-popover-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.tg-popover {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  max-width: 300px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+.tg-popover-text {
+  font-size: 14px;
+  color: var(--fg);
+  margin: 0 0 16px 0;
+}
+
+.tg-popover-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.tg-popover-btn {
+  padding: 6px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  cursor: pointer;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.tg-popover-btn-hapus {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+}
+
+.tg-popover-btn-hapus:hover {
+  background: #b91c1c;
+}
+
+.tg-popover-btn-batal:hover {
+  background: var(--bg-muted);
 }
 
 /* ─── Analysis Page ─── */

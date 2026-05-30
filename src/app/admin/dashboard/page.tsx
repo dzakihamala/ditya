@@ -6,7 +6,7 @@ import { AuthGuard } from "@/lib/AuthGuard";
 import { useAuth } from "@/lib/AuthContext";
 import { db } from "@/lib/firebase";
 import { getMeetings, deleteMeeting } from "@/lib/meetings";
-import { floatToTimeStr, formatDateShort } from "@/lib/date-utils";
+import { floatToTimeStr, formatDateGroups } from "@/lib/date-utils";
 import { useToast } from "@/lib/use-toast";
 import type { Meeting } from "@/lib/types";
 
@@ -65,14 +65,10 @@ function MeetingCard({
     }).catch(() => {});
   };
 
-  let dateLabel: string;
-  if (meeting.dates.length === 0) {
-    dateLabel = "Belum ada tanggal";
-  } else if (meeting.dates.length === 1) {
-    dateLabel = formatDateShort(meeting.dates[0]);
-  } else {
-    dateLabel = `${meeting.dates.length} tanggal`;
-  }
+  const dateLabel =
+    meeting.dates.length === 0
+      ? "Belum ada tanggal"
+      : formatDateGroups(meeting.dates);
 
   return (
     <>
@@ -86,20 +82,6 @@ function MeetingCard({
               {floatToTimeStr(meeting.startHour)}–{floatToTimeStr(meeting.endHour)}
             </span>
           </div>
-          {meeting.dates.length > 0 && (
-            <div className="meeting-dates-preview">
-              {meeting.dates.slice(0, 5).map((d) => (
-                <span key={d} className="date-chip">
-                  {formatDateShort(d)}
-                </span>
-              ))}
-              {meeting.dates.length > 5 && (
-                <span className="date-chip date-chip-more">
-                  +{meeting.dates.length - 5}
-                </span>
-              )}
-            </div>
-          )}
         </div>
         <div className="meeting-card-actions">
           <button

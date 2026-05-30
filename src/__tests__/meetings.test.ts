@@ -9,6 +9,8 @@ import {
   floatToTimeStr,
   timeStrToFloat,
   formatDateShort,
+  groupConsecutiveDates,
+  formatDateGroups,
 } from "@/lib/date-utils";
 import {
   createMeeting,
@@ -163,6 +165,121 @@ describe("timeStrToFloat", () => {
   it("converts fractional hours", () => {
     expect(timeStrToFloat("07:30")).toBe(7.5);
     expect(timeStrToFloat("12:45")).toBe(12.75);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  groupConsecutiveDates                                              */
+/* ------------------------------------------------------------------ */
+
+describe("groupConsecutiveDates", () => {
+  it("returns empty array for empty input", () => {
+    expect(groupConsecutiveDates([])).toEqual([]);
+  });
+
+  it("returns single group for a single date", () => {
+    expect(groupConsecutiveDates(["2026-06-15"])).toEqual([
+      ["2026-06-15"],
+    ]);
+  });
+
+  it("groups consecutive dates together", () => {
+    expect(groupConsecutiveDates(["2026-06-15", "2026-06-16", "2026-06-17"]))
+      .toEqual([["2026-06-15", "2026-06-16", "2026-06-17"]]);
+  });
+
+  it("splits non-consecutive dates into separate groups", () => {
+    expect(groupConsecutiveDates(["2026-06-15", "2026-06-20", "2026-06-22"]))
+      .toEqual([["2026-06-15"], ["2026-06-20"], ["2026-06-22"]]);
+  });
+
+  it("handles mixed consecutive and isolated dates", () => {
+    expect(groupConsecutiveDates([
+      "2026-06-15", "2026-06-16", "2026-06-17", "2026-06-20", "2026-06-22",
+    ])).toEqual([
+      ["2026-06-15", "2026-06-16", "2026-06-17"],
+      ["2026-06-20"],
+      ["2026-06-22"],
+    ]);
+  });
+
+  it("works with unsorted input", () => {
+    expect(groupConsecutiveDates(["2026-06-17", "2026-06-15", "2026-06-16"]))
+      .toEqual([["2026-06-15", "2026-06-16", "2026-06-17"]]);
+  });
+
+  it("handles cross-month consecutive dates correctly", () => {
+    // June 30 and July 1 are consecutive
+    expect(groupConsecutiveDates(["2026-06-30", "2026-07-01"]))
+      .toEqual([["2026-06-30", "2026-07-01"]]);
+  });
+
+  it("handles multiple groups of consecutive dates", () => {
+    expect(groupConsecutiveDates([
+      "2026-06-15", "2026-06-16", "2026-06-17",
+      "2026-06-20", "2026-06-21",
+      "2026-06-25",
+    ])).toEqual([
+      ["2026-06-15", "2026-06-16", "2026-06-17"],
+      ["2026-06-20", "2026-06-21"],
+      ["2026-06-25"],
+    ]);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  formatDateGroups                                                   */
+/* ------------------------------------------------------------------ */
+
+describe("formatDateGroups", () => {
+  it("returns empty string for empty input", () => {
+    expect(formatDateGroups([])).toBe("");
+  });
+
+  it("formats a single date", () => {
+    expect(formatDateGroups(["2026-06-15"])).toBe("15 Jun");
+  });
+
+  it("formats a consecutive range in the same month", () => {
+    expect(formatDateGroups(["2026-06-15", "2026-06-16", "2026-06-17"]))
+      .toBe("15–17 Jun");
+  });
+
+  it("formats non-consecutive dates separated by commas", () => {
+    expect(formatDateGroups(["2026-06-15", "2026-06-20", "2026-06-22"]))
+      .toBe("15 Jun, 20 Jun, 22 Jun");
+  });
+
+  it("formats mixed ranges and isolated dates", () => {
+    expect(formatDateGroups([
+      "2026-06-15", "2026-06-16", "2026-06-17", "2026-06-20", "2026-06-22",
+    ])).toBe("15–17 Jun, 20 Jun, 22 Jun");
+  });
+
+  it("formats cross-month consecutive range with both month names", () => {
+    expect(formatDateGroups(["2026-06-30", "2026-07-01"]))
+      .toBe("30 Jun – 1 Jul");
+  });
+
+  it("handles multiple ranges and dates", () => {
+    expect(formatDateGroups([
+      "2026-06-15", "2026-06-16",
+      "2026-06-20", "2026-06-21", "2026-06-22",
+      "2026-06-25",
+    ])).toBe("15–16 Jun, 20–22 Jun, 25 Jun");
+  });
+
+  it("works with unsorted input", () => {
+    expect(formatDateGroups(["2026-06-17", "2026-06-15", "2026-06-16"]))
+      .toBe("15–17 Jun");
+  });
+
+  it("uses Indonesian month abbreviations", () => {
+    expect(formatDateGroups(["2026-01-05"])).toBe("5 Jan");
+    expect(formatDateGroups(["2026-05-20"])).toBe("20 Mei");
+    expect(formatDateGroups(["2026-08-17"])).toBe("17 Agu");
+    expect(formatDateGroups(["2026-10-28"])).toBe("28 Okt");
+    expect(formatDateGroups(["2026-12-25"])).toBe("25 Des");
   });
 });
 

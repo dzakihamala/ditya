@@ -166,7 +166,7 @@ describe("Wizard Engine — state transitions", () => {
   });
 
   describe("GCAL_CONNECTED", () => {
-    it("transitions to select-time with GCal flag", () => {
+    it("transitions to gcal-conflicts with empty events", () => {
       const base: WizardState = {
         ...createInitialState(),
         step: "gcal",
@@ -175,7 +175,75 @@ describe("Wizard Engine — state transitions", () => {
       };
 
       const s = wizardReducer(base, { type: "GCAL_CONNECTED" });
+      expect(s.step).toBe("gcal-conflicts");
+      expect(s.gcalEvents).toEqual([]);
+      expect(s.gcalConnected).toBe(true);
+    });
+  });
+
+  describe("GCAL_EVENTS_LOADED", () => {
+    it("transitions to gcal-conflicts with fetched events", () => {
+      const base: WizardState = {
+        ...createInitialState(),
+        step: "gcal",
+        dates: DATES,
+        meetingTitle: "T",
+      };
+
+      const events = [
+        { start: "2026-06-15T09:00:00", end: "2026-06-15T10:00:00", summary: "Meeting A" },
+        { start: "2026-06-16T14:00:00", end: "2026-06-16T15:00:00", summary: "Dentist" },
+      ];
+
+      const s = wizardReducer(base, { type: "GCAL_EVENTS_LOADED", events });
+      expect(s.step).toBe("gcal-conflicts");
+      expect(s.gcalEvents).toEqual(events);
+      expect(s.gcalConnected).toBe(true);
+    });
+  });
+
+  describe("GCAL_CONFLICTS_CONFIRMED", () => {
+    it("transitions to select-time with conflict slots", () => {
+      const base: WizardState = {
+        ...createInitialState(),
+        step: "gcal-conflicts",
+        dates: DATES,
+        meetingTitle: "T",
+        gcalEvents: [
+          { start: "2026-06-15T09:00:00", end: "2026-06-15T10:00:00", summary: "Meeting A" },
+        ],
+      };
+
+      const s = wizardReducer(base, {
+        type: "GCAL_CONFLICTS_CONFIRMED",
+        conflictSlots: ["09:00", "09:30"],
+        selectedEvents: [
+          { start: "2026-06-15T09:00:00", end: "2026-06-15T10:00:00", summary: "Meeting A" },
+        ],
+      });
+
       expect(s.step).toBe("select-time");
+      expect(s.conflictSlots).toEqual(["09:00", "09:30"]);
+      expect(s.gcalConnected).toBe(true);
+    });
+
+    it("goes to select-time with empty conflicts when no events selected", () => {
+      const base: WizardState = {
+        ...createInitialState(),
+        step: "gcal-conflicts",
+        dates: DATES,
+        meetingTitle: "T",
+        gcalEvents: [],
+      };
+
+      const s = wizardReducer(base, {
+        type: "GCAL_CONFLICTS_CONFIRMED",
+        conflictSlots: [],
+        selectedEvents: [],
+      });
+
+      expect(s.step).toBe("select-time");
+      expect(s.conflictSlots).toEqual([]);
       expect(s.gcalConnected).toBe(true);
     });
   });
@@ -661,7 +729,7 @@ describe("Wizard Engine — full wizard flow scenarios", () => {
     expect(s.confirmedAt).toBeTruthy();
   });
 
-  it("gcal connected path: input → gcal (connect) → select-time → review → saved", () => {
+  it("gcal connected path: input → gcal (connect) → gcal-conflicts → select-time → review → saved", () => {
     let s = createInitialState();
 
     s = wizardReducer(s, {
@@ -678,9 +746,23 @@ describe("Wizard Engine — full wizard flow scenarios", () => {
       participantId: "p2",
     });
 
-    s = wizardReducer(s, { type: "GCAL_CONNECTED" });
+    const events = [
+      { start: "2026-06-15T09:00:00", end: "2026-06-15T10:00:00", summary: "Meeting A" },
+    ];
+
+    s = wizardReducer(s, { type: "GCAL_EVENTS_LOADED", events });
+    expect(s.step).toBe("gcal-conflicts");
+    expect(s.gcalEvents).toEqual(events);
+    expect(s.gcalConnected).toBe(true);
+
+    s = wizardReducer(s, {
+      type: "GCAL_CONFLICTS_CONFIRMED",
+      conflictSlots: ["09:00", "09:30"],
+      selectedEvents: [events[0]],
+    });
     expect(s.step).toBe("select-time");
     expect(s.gcalConnected).toBe(true);
+    expect(s.conflictSlots).toEqual(["09:00", "09:30"]);
   });
 
   it("returning participant starts modify flow instead of gcal", () => {

@@ -2,12 +2,21 @@
 
 import { useState, useCallback } from "react";
 import { getConflictingSlots, type GCalEvent } from "@/lib/time-selector";
+import { formatDateLong } from "@/lib/date-utils";
 
 interface GCalButtonProps {
   dates: string[];
   startHour: number;
   endHour: number;
   onConflictsChange: (conflicts: string[]) => void;
+  onEventsFetched?: (events: GCalEvent[]) => void;
+  initialConnected?: boolean;
+}
+
+interface GCalConflictPanelProps {
+  events: GCalEvent[];
+  dates: string[];
+  onConfirm: (selectedEvents: GCalEvent[]) => void;
 }
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
@@ -20,13 +29,27 @@ const CHECKMARK_SVG = (
   </svg>
 );
 
+function eventOverlapsDates(event: GCalEvent, dates: string[]): boolean {
+  const eventStart = new Date(event.start);
+  const eventEnd = new Date(event.end);
+  if (isNaN(eventStart.getTime()) || isNaN(eventEnd.getTime())) return false;
+
+  return dates.some((date) => {
+    const dateStart = new Date(date + "T00:00:00");
+    const dateEnd = new Date(date + "T23:59:59");
+    return !(eventEnd <= dateStart || eventStart >= dateEnd);
+  });
+}
+
 export function GCalButton({
   dates,
   startHour,
   endHour,
   onConflictsChange,
+  onEventsFetched,
+  initialConnected,
 }: GCalButtonProps) {
-  const [connected, setConnected] = useState(false);
+  const [connected, setConnected] = useState(initialConnected ?? false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,6 +85,13 @@ export function GCalButton({
         }
       }
 
+      if (onEventsFetched) {
+        onEventsFetched(allEvents);
+        setConnected(true);
+        setLoading(false);
+        return;
+      }
+
       const allConflicts = new Set<string>();
       for (const date of dates) {
         for (const slot of getConflictingSlots(
@@ -76,7 +106,7 @@ export function GCalButton({
 
       onConflictsChange(Array.from(allConflicts).sort());
     },
-    [dates, startHour, endHour, onConflictsChange],
+    [dates, startHour, endHour, onConflictsChange, onEventsFetched],
   );
 
   const handleConnect = useCallback(() => {
@@ -113,8 +143,10 @@ export function GCalButton({
               return;
             }
             await fetchEvents(resp.access_token);
-            setConnected(true);
-            setLoading(false);
+            if (!onEventsFetched) {
+              setConnected(true);
+              setLoading(false);
+            }
           },
         });
 
@@ -124,7 +156,7 @@ export function GCalButton({
         setLoading(false);
       }
     });
-  }, [fetchEvents]);
+  }, [fetchEvents, onEventsFetched]);
 
   const handleDisconnect = useCallback(() => {
     if (window.gapi?.client) {
@@ -174,6 +206,155 @@ export function GCalButton({
       {error && (
         <span style={{ fontSize: 11, color: "var(--red)" }}>{error}</span>
       )}
+    </div>
+  );
+}
+
+export function GCalConflictPanel({
+  events,
+  dates,
+  onConfirm,
+}: GCalConflictPanelProps) {
+  const [checked, setChecked] = useState<Set<number>>(new Set());
+
+  const overlappingEvents = events.filter((e) => eventOverlapsDates(e, dates));
+
+  const toggle = (idx: number) => {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
+
+  const handleConfirm = () => {
+    const selected = overlappingEvents.filter((_, i) => checked.has(i));
+    onConfirm(selected);
+  };
+
+  if (overlappingEvents.length === 0) {
+    return (
+      <div className="wizard-wrap wizard-step" style={{ padding: "28px 24px" }}>
+        <div className="card" style={{ maxWidth: 440, padding: "32px" }}>
+          <div className="card-badge">Langkah 2 — Kalender</div>
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 500,
+              marginBottom: 8,
+              color: "var(--text)",
+            }}
+          >
+            Google Calendar terhubung
+          </h1>
+          <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 20 }}>
+            Tidak ada acara yang bentrok dengan tanggal pertemuan.
+          </p>
+          <button
+            className="btn btn-p"
+            onClick={handleConfirm}
+            style={{ width: "100%" }}
+          >
+            Lanjutkan
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="wizard-wrap wizard-step" style={{ padding: "28px 24px" }}>
+      <div className="card" style={{ maxWidth: 440, padding: "32px" }}>
+        <div className="card-badge">Langkah 2 — Kalender</div>
+        <h1
+          style={{
+            fontSize: 22,
+            fontWeight: 500,
+            marginBottom: 8,
+            color: "var(--text)",
+          }}
+        >
+          Google Calendar terhubung
+        </h1>
+        <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 20 }}>
+          Kamu tidak bisa ikut pertemuan pada acara yang mana?
+        </p>
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            marginBottom: 20,
+          }}
+        >
+          {overlappingEvents.map((event, idx) => {
+            const eventStart = new Date(event.start);
+            const eventEnd = new Date(event.end);
+            const dateStr = formatDateLong(
+              eventStart.toISOString().slice(0, 10),
+            );
+            const startTime = eventStart.toLocaleTimeString("id-ID", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+            const endTime = eventEnd.toLocaleTimeString("id-ID", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+
+            return (
+              <label
+                key={idx}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 12,
+                  padding: "12px 14px",
+                  borderRadius: 8,
+                  border: "1px solid var(--border)",
+                  background: checked.has(idx)
+                    ? "var(--green-pale)"
+                    : "#fafafa",
+                  cursor: "pointer",
+                  transition: "background 200ms ease",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked.has(idx)}
+                  onChange={() => toggle(idx)}
+                  style={{ marginTop: 2, accentColor: "var(--green)" }}
+                />
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text)" }}>
+                    {event.summary || "(Tanpa judul)"}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "var(--muted)",
+                      fontFamily: "var(--font-mono)",
+                      marginTop: 2,
+                    }}
+                  >
+                    {dateStr} · {startTime}–{endTime}
+                  </div>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+
+        <button
+          className="btn btn-p"
+          onClick={handleConfirm}
+          style={{ width: "100%" }}
+        >
+          Simpan
+        </button>
+      </div>
     </div>
   );
 }

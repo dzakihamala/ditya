@@ -416,6 +416,14 @@ body {
   font-weight: 500;
 }
 
+.wizard-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
 .dash-empty {
   text-align: center;
   padding: 60px 20px;

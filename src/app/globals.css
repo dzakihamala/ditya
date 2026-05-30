@@ -362,18 +362,9 @@ body {
 }
 
 /* ─── Button hover scale ─── */
-.btn:hover {
-  transform: scale(1.02);
-}
-
-.btn-ghost:hover {
-  transform: scale(1.02);
-}
-
-.btn-danger:hover {
-  transform: scale(1.02);
-}
-
+.btn:hover,
+.btn-ghost:hover,
+.btn-danger:hover,
 .btn-a:hover {
   transform: scale(1.02);
 }

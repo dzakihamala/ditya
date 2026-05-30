@@ -488,7 +488,6 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
 
   // ---- STEP 3: Select time ----
   if (wizard.step === "select-time" && wizard.dates.length > 0) {
-    const activeDate = wizard.dates[wizard.activeDateIndex];
     const inModifyMode = wizard.isModifyMode;
     return (
       <div className="wizard-step">

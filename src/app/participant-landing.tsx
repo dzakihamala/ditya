@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { db } from "@/lib/firebase";
+import { normalizeName } from "@/lib/participant";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 type Meeting = { eventName: string };
@@ -45,7 +46,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
       if (!trimmed) return;
 
       setStep("checking");
-      const nameUpper = trimmed.toUpperCase();
+      const nameUpper = normalizeName(trimmed);
 
       try {
         const q = query(
@@ -94,10 +95,6 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
     setName("");
     setExisting(null);
     setStep("new-name");
-  };
-
-  const handleUseDifferentName = () => {
-    setStep("input");
   };
 
   if (error && step !== "duplicate") {
@@ -236,11 +233,6 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
             >
               Apakah ini Anda?
             </p>
-            {error && (
-              <div className="err-box" style={{ marginBottom: 16 }}>
-                {error}
-              </div>
-            )}
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 className="btn btn-p"

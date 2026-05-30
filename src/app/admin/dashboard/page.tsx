@@ -55,12 +55,14 @@ function MeetingCard({
     navigator.clipboard.writeText(link).catch(() => {});
   };
 
-  const dateLabel =
-    meeting.dates.length === 0
-      ? "Belum ada tanggal"
-      : meeting.dates.length === 1
-        ? formatDateShort(meeting.dates[0])
-        : `${meeting.dates.length} tanggal`;
+  let dateLabel: string;
+  if (meeting.dates.length === 0) {
+    dateLabel = "Belum ada tanggal";
+  } else if (meeting.dates.length === 1) {
+    dateLabel = formatDateShort(meeting.dates[0]);
+  } else {
+    dateLabel = `${meeting.dates.length} tanggal`;
+  }
 
   return (
     <div className="meeting-card">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { AuthGuard } from "@/lib/AuthGuard";
 import { db } from "@/lib/firebase";
@@ -16,7 +16,6 @@ import {
   floatToTimeStr,
   timeStrToFloat,
 } from "@/lib/date-utils";
-import type { Meeting } from "@/lib/types";
 
 const MONTHS = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -24,10 +23,6 @@ const MONTHS = [
 ];
 
 const DAYS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
-
-/* ------------------------------------------------------------------ */
-/*  Calendar                                                           */
-/* ------------------------------------------------------------------ */
 
 function Calendar({
   selected,
@@ -82,19 +77,19 @@ function Calendar({
 
   const prevMonth = () => {
     if (month === 0) {
-      setYear((y) => y - 1);
+      setYear((prev) => prev - 1);
       setMonth(11);
     } else {
-      setMonth((m) => m - 1);
+      setMonth((prev) => prev - 1);
     }
   };
 
   const nextMonth = () => {
     if (month === 11) {
-      setYear((y) => y + 1);
+      setYear((prev) => prev + 1);
       setMonth(0);
     } else {
-      setMonth((m) => m + 1);
+      setMonth((prev) => prev + 1);
     }
   };
 
@@ -145,10 +140,6 @@ function Calendar({
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Time Picker                                                        */
-/* ------------------------------------------------------------------ */
-
 function TimePicker({
   value,
   onChange,
@@ -192,10 +183,6 @@ function TimePicker({
     </div>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/*  Editor Page                                                        */
-/* ------------------------------------------------------------------ */
 
 function EditorContent() {
   const router = useRouter();
@@ -298,7 +285,6 @@ function EditorContent() {
       </div>
 
       <div className="editor-card">
-        {/* Name */}
         <label className="form-label">Nama Rapat</label>
         <input
           className="input"
@@ -310,7 +296,6 @@ function EditorContent() {
 
         <hr className="divider" />
 
-        {/* Dates */}
         <label className="form-label">
           Tanggal Kandidat ({dates.length} dipilih)
         </label>
@@ -337,23 +322,22 @@ function EditorContent() {
 
         <hr className="divider" />
 
-        {/* Time */}
         <label className="form-label">Rentang Jam</label>
         <div className="time-range">
           <TimePicker
             label="Mulai"
             value={startHour}
-            onChange={(v) => {
-              setStartHour(v);
-              if (v >= endHour) setEndHour(Math.min(v + 0.5, 23.98));
+            onChange={(newStart) => {
+              setStartHour(newStart);
+              if (newStart >= endHour) setEndHour(Math.min(newStart + 0.5, 23.98));
             }}
           />
           <span className="time-range-dash">—</span>
           <TimePicker
             label="Selesai"
             value={endHour}
-            onChange={(v) => {
-              if (v > startHour) setEndHour(v);
+            onChange={(newEnd) => {
+              if (newEnd > startHour) setEndHour(newEnd);
             }}
           />
         </div>
@@ -364,7 +348,6 @@ function EditorContent() {
 
         <hr className="divider" />
 
-        {/* Broadcast link */}
         {broadcastLink && (
           <>
             <label className="form-label">Link Undangan</label>
@@ -378,7 +361,6 @@ function EditorContent() {
           </>
         )}
 
-        {/* Error & Save */}
         {error && <div className="err-box">{error}</div>}
         <button
           className="btn btn-p"

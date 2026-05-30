@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useReducer } from "react";
 import { db } from "@/lib/firebase";
 import { normalizeName, getDeviceInfo, createParticipant, saveParticipantAvailability } from "@/lib/participant";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { TimeSelector } from "./time-selector";
-
-type Meeting = {
-  eventName: string;
-  dates: string[];
-  startHour: number;
-  endHour: number;
-};
+import { Review } from "./review";
+import {
+  createInitialState,
+  wizardReducer,
+  getReviewItems,
+} from "@/lib/wizard";
 
 type ExistingParticipant = {
   id: string;
@@ -21,35 +20,38 @@ type ExistingParticipant = {
   availability?: Record<string, string[]>;
 };
 
-type Step = "loading" | "input" | "checking" | "duplicate" | "new-name" | "select-time" | "saved";
-
 export function ParticipantLanding({ meetingId }: { meetingId: string }) {
-  const [meeting, setMeeting] = useState<Meeting | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [wizard, dispatch] = useReducer(wizardReducer, createInitialState());
   const [name, setName] = useState("");
-  const [step, setStep] = useState<Step>("loading");
   const [existing, setExisting] = useState<ExistingParticipant | null>(null);
-  const [participantId, setParticipantId] = useState<string | null>(null);
-  const [availability, setAvailability] = useState<Record<string, string[]>>({});
+  const [showNewNameHint, setShowNewNameHint] = useState(false);
+  const [saving, setSaving] = useState(false);
 
+  // Load meeting data
   useEffect(() => {
     const fetchMeeting = async () => {
       try {
         const snap = await getDoc(doc(db, "meetings", meetingId));
         if (!snap.exists()) {
-          setError("Rapat tidak ditemukan atau sudah dihapus.");
+          dispatch({
+            type: "LOAD_MEETING_FAIL",
+            error: "Rapat tidak ditemukan atau sudah dihapus.",
+          });
           return;
         }
         const data = snap.data();
-        setMeeting({
-          eventName: data.eventName ?? "Tanpa Judul",
+        dispatch({
+          type: "LOAD_MEETING_OK",
+          meetingTitle: data.eventName ?? "Tanpa Judul",
           dates: data.dates ?? [],
           startHour: data.startHour ?? 8,
           endHour: data.endHour ?? 17,
         });
-        setStep("input");
       } catch {
-        setError("Gagal memuat data rapat. Periksa koneksi Anda.");
+        dispatch({
+          type: "LOAD_MEETING_FAIL",
+          error: "Gagal memuat data rapat. Periksa koneksi Anda.",
+        });
       }
     };
     fetchMeeting();
@@ -60,13 +62,12 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
       const trimmed = inputName.trim();
       if (!trimmed) return;
 
-      setStep("checking");
-      const nameUpper = normalizeName(trimmed);
+      dispatch({ type: "SET_ERROR", error: "checking" });
 
       try {
         const q = query(
           collection(db, "meetings", meetingId, "participants"),
-          where("name", "==", nameUpper),
+          where("name", "==", normalizeName(trimmed)),
         );
         const snap = await getDocs(q);
 
@@ -80,20 +81,21 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
             createdAt: data.createdAt ?? "",
             availability: data.availability ?? {},
           });
-          setStep("duplicate");
+          dispatch({ type: "CLEAR_ERROR" });
         } else {
           await startNewParticipant(trimmed);
         }
       } catch {
-        setError("Gagal memeriksa data. Coba lagi.");
-        setStep("input");
+        dispatch({
+          type: "SET_ERROR",
+          error: "Gagal memeriksa data. Coba lagi.",
+        });
       }
     },
     [meetingId],
   );
 
   const startNewParticipant = async (displayName: string) => {
-    if (!meeting) return;
     try {
       const id = await createParticipant(db, meetingId, {
         name: displayName,
@@ -104,12 +106,16 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         `participant:${meetingId}`,
         JSON.stringify({ id, name: displayName }),
       );
-      setParticipantId(id);
-      setAvailability({});
-      setStep("select-time");
+      dispatch({
+        type: "NAME_CONFIRMED",
+        displayName,
+        participantId: id,
+      });
     } catch {
-      setError("Gagal menyimpan data. Coba lagi.");
-      setStep("input");
+      dispatch({
+        type: "SET_ERROR",
+        error: "Gagal menyimpan data. Coba lagi.",
+      });
     }
   };
 
@@ -124,52 +130,133 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         `participant:${meetingId}`,
         JSON.stringify({ id: existing.id, name: existing.displayName }),
       );
-      setParticipantId(existing.id);
-      setAvailability(existing.availability ?? {});
-      setStep("select-time");
+      dispatch({
+        type: "NAME_CONFIRMED",
+        displayName: existing.displayName,
+        participantId: existing.id,
+        availability: existing.availability ?? {},
+      });
     }
-    setError(null);
   };
 
   const handleNo = () => {
     setName("");
     setExisting(null);
-    setStep("new-name");
+    setShowNewNameHint(true);
   };
+
+  const handleSkipGcal = useCallback(() => {
+    dispatch({ type: "SKIP_GCAL" });
+  }, []);
+
+  const handleGcalConnected = useCallback(() => {
+    dispatch({ type: "GCAL_CONNECTED" });
+  }, []);
 
   const handleSaveSlot = useCallback(
     async (date: string, slots: string[]) => {
-      const updated = { ...availability, [date]: slots };
-      setAvailability(updated);
-      if (participantId) {
+      dispatch({ type: "UPDATE_SLOTS", date, slots });
+      if (wizard.participantId) {
+        const updated = { ...wizard.availability, [date]: slots };
         try {
-          await saveParticipantAvailability(db, meetingId, participantId, updated);
+          await saveParticipantAvailability(
+            db,
+            meetingId,
+            wizard.participantId,
+            updated,
+          );
         } catch {
           // Firestore save failed silently — data is still in local state
         }
       }
     },
-    [availability, participantId, meetingId],
+    [wizard.participantId, wizard.availability, meetingId],
   );
 
-  const handleComplete = useCallback(() => {
-    setStep("saved");
+  const handleDateChange = useCallback(
+    (date: string) => {
+      const idx = wizard.dates.indexOf(date);
+      if (idx >= 0) {
+        dispatch({ type: "SET_DATE_INDEX", index: idx });
+      }
+    },
+    [wizard.dates],
+  );
+
+  const handleNextDate = useCallback(() => {
+    if (wizard.activeDateIndex < wizard.dates.length - 1) {
+      dispatch({
+        type: "SET_DATE_INDEX",
+        index: wizard.activeDateIndex + 1,
+      });
+    }
+  }, [wizard.activeDateIndex, wizard.dates.length]);
+
+  const handlePrevDate = useCallback(() => {
+    if (wizard.activeDateIndex > 0) {
+      dispatch({
+        type: "SET_DATE_INDEX",
+        index: wizard.activeDateIndex - 1,
+      });
+    }
+  }, [wizard.activeDateIndex]);
+
+  const handleGoToReview = useCallback(() => {
+    dispatch({ type: "GO_TO_REVIEW" });
   }, []);
 
-  if (error && step !== "duplicate") {
+  const handleEdit = useCallback((date: string) => {
+    dispatch({ type: "GO_TO_EDIT", date });
+  }, []);
+
+  const handleConfirm = useCallback(async () => {
+    setSaving(true);
+    try {
+      if (wizard.participantId) {
+        const { updateDoc, doc } = await import("firebase/firestore");
+        await updateDoc(
+          doc(db, "meetings", meetingId, "participants", wizard.participantId),
+          {
+            confirmedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        );
+      }
+      dispatch({ type: "CONFIRM_SAVE" });
+    } catch {
+      dispatch({
+        type: "SET_ERROR",
+        error: "Gagal menyimpan. Coba lagi.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [wizard.participantId, meetingId]);
+
+  // ---- RENDER ----
+
+  const checking = wizard.error === "checking";
+
+  if (wizard.error && wizard.step === "loading" && !checking) {
     return (
       <div className="wizard-wrap">
         <div className="card" style={{ maxWidth: 440, textAlign: "center" }}>
           <div className="card-badge" style={{ color: "var(--red)" }}>
             Error
           </div>
-          <p style={{ fontSize: 14, marginBottom: 20 }}>{error}</p>
+          <p style={{ fontSize: 14, marginBottom: 20 }}>{wizard.error}</p>
+          <button
+            className="btn btn-o"
+            onClick={() => window.location.reload()}
+          >
+            Coba lagi
+          </button>
         </div>
       </div>
     );
   }
 
-  if (step === "loading") {
+  if (wizard.step === "loading") {
     return (
       <div className="loading" role="status">
         <div className="spinner" />
@@ -186,22 +273,96 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
     );
   }
 
-  if (step === "select-time" && meeting) {
+  // ---- STEP 2: GCal opt-in ----
+  if (wizard.step === "gcal") {
+    return (
+      <div className="wizard-wrap" style={{ padding: "28px 24px" }}>
+        <div className="card" style={{ maxWidth: 440, padding: "32px" }}>
+          <div className="card-badge">Langkah 2 — Kalender</div>
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 500,
+              marginBottom: 8,
+              color: "var(--text)",
+            }}
+          >
+            Hubungkan Google Calendar
+          </h1>
+          <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 20 }}>
+            Anda dapat menghubungkan Google Calendar untuk melihat acara yang
+            bentrok saat memilih waktu. Slot yang bentrok akan ditampilkan
+            sebagai informasi — Anda tetap bisa memilihnya.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <button
+              className="btn btn-g"
+              onClick={handleGcalConnected}
+              style={{ width: "100%" }}
+            >
+              Hubungkan Google Calendar
+            </button>
+            <button
+              className="btn btn-o"
+              onClick={handleSkipGcal}
+              style={{ width: "100%" }}
+            >
+              Lewati
+            </button>
+          </div>
+          <p
+            style={{
+              fontSize: 11,
+              color: "var(--muted)",
+              marginTop: 14,
+              textAlign: "center",
+              fontFamily: "var(--font-mono)",
+            }}
+          >
+            Anda bisa menghubungkan nanti di halaman pemilihan waktu.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- STEP 3: Select time ----
+  if (wizard.step === "select-time" && wizard.dates.length > 0) {
+    const activeDate = wizard.dates[wizard.activeDateIndex];
     return (
       <TimeSelector
         meetingId={meetingId}
-        dates={meeting.dates}
-        startHour={meeting.startHour}
-        endHour={meeting.endHour}
-        initialAvailability={availability}
+        dates={wizard.dates}
+        startHour={wizard.startHour}
+        endHour={wizard.endHour}
+        initialAvailability={wizard.availability}
         onSave={handleSaveSlot}
-        onNext={handleComplete}
-        onPrev={() => {}}
+        onNext={handleNextDate}
+        onPrev={handlePrevDate}
+        onDateChange={handleDateChange}
+        activeDateIndex={wizard.activeDateIndex}
+        onGoToReview={handleGoToReview}
       />
     );
   }
 
-  if (step === "saved") {
+  // ---- STEP 4: Review ----
+  if (wizard.step === "review") {
+    const items = getReviewItems(wizard.availability, wizard.dates);
+    return (
+      <Review
+        items={items}
+        displayName={wizard.displayName}
+        onEdit={handleEdit}
+        onSave={handleConfirm}
+        saving={saving}
+        error={wizard.error}
+      />
+    );
+  }
+
+  // ---- STEP 5: Thank you ----
+  if (wizard.step === "saved") {
     return (
       <div className="wizard-wrap">
         <div className="card" style={{ maxWidth: 440, textAlign: "center" }}>
@@ -221,16 +382,28 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
             ✓
           </div>
           <p style={{ fontSize: 14, color: "var(--text)", marginBottom: 4 }}>
-            Terima kasih, <strong>{name || existing?.displayName}</strong>!
+            Terima kasih, <strong>{wizard.displayName}</strong>!
           </p>
-          <p style={{ fontSize: 13, color: "var(--muted)" }}>
+          <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 20 }}>
             Ketersediaan Anda telah disimpan.
           </p>
+          <button
+            className="btn btn-o"
+            onClick={() =>
+              dispatch({
+                type: "GO_TO_EDIT",
+                date: wizard.dates[0] || "",
+              })
+            }
+            style={{ fontSize: 13 }}
+          >
+            Ubah jadwal
+          </button>
           <p
             style={{
               fontSize: 11,
               color: "var(--muted)",
-              marginTop: 12,
+              marginTop: 16,
               fontFamily: "var(--font-mono)",
             }}
           >
@@ -241,6 +414,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
     );
   }
 
+  // ---- STEP 1: Name input ----
   return (
     <div className="wizard-wrap">
       <div className="card" style={{ maxWidth: 440 }}>
@@ -253,116 +427,124 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
             color: "var(--text)",
           }}
         >
-          {meeting?.eventName ?? "Undangan Rapat"}
+          {wizard.meetingTitle || "Undangan Rapat"}
         </h1>
         <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 24 }}>
           Silakan masukkan nama Anda untuk melanjutkan.
         </p>
 
-        {/* Name input state */}
-        {(step === "input" || step === "new-name") && (
-          <form onSubmit={handleSubmit}>
-            <label className="form-label">Nama Anda</label>
-            <input
-              className="input"
-              type="text"
-              placeholder="Ketik nama lengkap..."
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoFocus
-              required
-            />
-            {step === "new-name" && (
-              <div
-                className="err-box"
-                style={{ marginTop: 12, marginBottom: 0 }}
-              >
-                Silakan gunakan nama yang berbeda.
+        {wizard.step === "input" && (
+          <>
+            {!existing ? (
+              <form onSubmit={handleSubmit}>
+                <label className="form-label">Nama Anda</label>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="Ketik nama lengkap..."
+                  value={name}
+                  onChange={(e) => { setName(e.target.value); setShowNewNameHint(false); }}
+                  autoFocus
+                  required
+                />
+                {wizard.error && wizard.error !== "checking" && (
+                  <div
+                    className="err-box"
+                    style={{ marginTop: 12, marginBottom: 0 }}
+                  >
+                    {wizard.error}
+                  </div>
+                )}
+                <div style={{ marginTop: 16 }}>
+                  <button
+                    className="btn btn-p"
+                    type="submit"
+                    disabled={!name.trim() || checking}
+                    style={{ width: "100%" }}
+                  >
+                    Lanjutkan
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div>
+                <div
+                  style={{
+                    background: "var(--green-pale)",
+                    border: "1px solid var(--green)",
+                    borderRadius: 8,
+                    padding: "14px 16px",
+                    marginBottom: 8,
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: 14,
+                      color: "var(--text)",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Sepertinya <strong>{existing.displayName}</strong> sudah
+                    mengisi pada{" "}
+                    {existing.createdAt
+                      ? new Date(existing.createdAt).toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "waktu sebelumnya"}
+                    {" · "}
+                    {existing.deviceInfo.os} · {existing.deviceInfo.browser}
+                  </p>
+                </div>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: "var(--muted)",
+                    marginBottom: 16,
+                    textAlign: "center",
+                  }}
+                >
+                  Apakah ini Anda?
+                </p>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    className="btn btn-p"
+                    onClick={handleYes}
+                    style={{ flex: 1 }}
+                  >
+                    Ya, itu saya
+                  </button>
+                  <button
+                    className="btn btn-o"
+                    onClick={handleNo}
+                    style={{ flex: 1 }}
+                  >
+                    Bukan saya
+                  </button>
+                </div>
               </div>
             )}
-            <div style={{ marginTop: 16 }}>
-              <button
-                className="btn btn-p"
-                type="submit"
-                disabled={!name.trim()}
-                style={{ width: "100%" }}
-              >
-                Lanjutkan
-              </button>
-            </div>
-          </form>
+
+            {checking && (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <div className="spinner" style={{ margin: "0 auto 12px" }} />
+                <p style={{ fontSize: 13, color: "var(--muted)" }}>
+                  Memeriksa data...
+                </p>
+              </div>
+            )}
+          </>
         )}
 
-        {/* Checking state */}
-        {step === "checking" && (
-          <div style={{ textAlign: "center", padding: "20px 0" }}>
-            <div className="spinner" style={{ margin: "0 auto 12px" }} />
-            <p style={{ fontSize: 13, color: "var(--muted)" }}>
-              Memeriksa data...
-            </p>
-          </div>
-        )}
-
-        {/* Duplicate found state */}
-        {step === "duplicate" && existing && (
-          <div>
-            <div
-              style={{
-                background: "var(--green-pale)",
-                border: "1px solid var(--green)",
-                borderRadius: 8,
-                padding: "14px 16px",
-                marginBottom: 8,
-              }}
-            >
-              <p
-                style={{
-                  fontSize: 14,
-                  color: "var(--text)",
-                  marginBottom: 6,
-                }}
-              >
-                Sepertinya <strong>{existing.displayName}</strong> sudah
-                mengisi pada{" "}
-                {existing.createdAt
-                  ? new Date(existing.createdAt).toLocaleDateString("id-ID", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "waktu sebelumnya"}
-                {" · "}
-                {existing.deviceInfo.os} · {existing.deviceInfo.browser}
-              </p>
-            </div>
-            <p
-              style={{
-                fontSize: 13,
-                color: "var(--muted)",
-                marginBottom: 16,
-                textAlign: "center",
-              }}
-            >
-              Apakah ini Anda?
-            </p>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                className="btn btn-p"
-                onClick={handleYes}
-                style={{ flex: 1 }}
-              >
-                Ya, itu saya
-              </button>
-              <button
-                className="btn btn-o"
-                onClick={handleNo}
-                style={{ flex: 1 }}
-              >
-                Bukan saya
-              </button>
-            </div>
+        {wizard.step === "input" && !existing && showNewNameHint && !checking && (
+          <div
+            className="err-box"
+            style={{ marginTop: 12, marginBottom: 0 }}
+          >
+            Silakan gunakan nama yang berbeda.
           </div>
         )}
       </div>

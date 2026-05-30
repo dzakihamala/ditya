@@ -16,6 +16,9 @@ interface TimeSelectorProps {
   onSave: (date: string, slots: string[]) => void;
   onNext: () => void;
   onPrev: () => void;
+  activeDateIndex?: number;
+  onDateChange?: (date: string) => void;
+  onGoToReview?: () => void;
 }
 
 export function TimeSelector({
@@ -26,17 +29,30 @@ export function TimeSelector({
   onSave,
   onNext,
   onPrev,
+  activeDateIndex: controlledIndex,
+  onDateChange: controlledDateChange,
+  onGoToReview,
 }: TimeSelectorProps) {
   const [availability, setAvailability] = useState<
     Record<string, string[]>
   >(initialAvailability);
 
-  const [activeIndex, setActiveIndex] = useState(() => {
+  const [internalIndex, setInternalIndex] = useState(() => {
     const firstPending = dates.findIndex(
       (d) => getDateChipStatus(d, initialAvailability, d) !== "filled",
     );
     return firstPending >= 0 ? firstPending : 0;
   });
+
+  const activeIndex = controlledIndex ?? internalIndex;
+  const setActiveIndex = useCallback(
+    (idx: number) => {
+      if (controlledIndex === undefined) {
+        setInternalIndex(idx);
+      }
+    },
+    [controlledIndex],
+  );
 
   const [conflicts, setConflicts] = useState<string[]>([]);
 
@@ -62,31 +78,46 @@ export function TimeSelector({
     onSave(activeDate, []);
 
     if (activeIndex < dates.length - 1) {
-      setActiveIndex((i) => i + 1);
+      const next = activeIndex + 1;
+      setActiveIndex(next);
+      if (controlledDateChange) {
+        controlledDateChange(dates[next]);
+      }
     }
-  }, [activeDate, activeIndex, dates.length, onSave]);
+  }, [activeDate, activeIndex, dates, onSave, setActiveIndex, controlledDateChange]);
 
-  const handleDateChange = useCallback(
+  const handleDateChipClick = useCallback(
     (date: string) => {
       const idx = dates.indexOf(date);
       if (idx >= 0) {
         setActiveIndex(idx);
+        if (controlledDateChange) {
+          controlledDateChange(date);
+        }
       }
     },
-    [dates],
+    [dates, setActiveIndex, controlledDateChange],
   );
 
   const handleNext = useCallback(() => {
     if (activeIndex < dates.length - 1) {
-      setActiveIndex((i) => i + 1);
+      const next = activeIndex + 1;
+      setActiveIndex(next);
+      if (controlledDateChange) {
+        controlledDateChange(dates[next]);
+      }
     }
-  }, [activeIndex, dates.length]);
+  }, [activeIndex, dates, setActiveIndex, controlledDateChange]);
 
   const handlePrev = useCallback(() => {
     if (activeIndex > 0) {
-      setActiveIndex((i) => i - 1);
+      const prev = activeIndex - 1;
+      setActiveIndex(prev);
+      if (controlledDateChange) {
+        controlledDateChange(dates[prev]);
+      }
     }
-  }, [activeIndex]);
+  }, [activeIndex, dates, setActiveIndex, controlledDateChange]);
 
   const ranges = slotsToRanges(selectedSlots);
   const isLastDate = activeIndex === dates.length - 1;
@@ -124,7 +155,7 @@ export function TimeSelector({
           dates={dates}
           availability={availability}
           activeDate={activeDate}
-          onDateChange={handleDateChange}
+          onDateChange={handleDateChipClick}
         />
 
         <GCalButton
@@ -180,7 +211,10 @@ export function TimeSelector({
             ← Sebelumnya
           </button>
           {isLastDate ? (
-            <button className="btn btn-p" onClick={onNext}>
+            <button
+              className="btn btn-p"
+              onClick={onGoToReview ?? onNext}
+            >
               Review →
             </button>
           ) : (

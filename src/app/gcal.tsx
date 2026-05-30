@@ -12,54 +12,13 @@ interface GCalButtonProps {
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY ?? "";
-
-// Scopes needed for Calendar read-only access
 const SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
 
-declare global {
-  interface Window {
-    gapi: {
-      load: (api: string, callback: () => void) => void;
-      client: {
-        init: (config: Record<string, string>) => Promise<void>;
-        calendar: {
-          events: {
-            list: (params: Record<string, string | boolean>) => Promise<{
-              result: { items: GoogleCalendarEvent[] };
-            }>;
-          };
-        };
-        setToken: (token: { access_token: string }) => void;
-      };
-    };
-    google: {
-      accounts: {
-        oauth2: {
-          initTokenClient: (config: {
-            client_id: string;
-            scope: string;
-            callback: (resp: TokenResponse) => void;
-          }) => TokenClient;
-        };
-      };
-    };
-  }
-}
-
-interface GoogleCalendarEvent {
-  start?: { dateTime?: string; date?: string };
-  end?: { dateTime?: string; date?: string };
-  summary?: string;
-}
-
-interface TokenResponse {
-  access_token: string;
-  error?: string;
-}
-
-interface TokenClient {
-  requestAccessToken: () => void;
-}
+const CHECKMARK_SVG = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 14.17l6.59-6.59L19 9l-8 8z" />
+  </svg>
+);
 
 export function GCalButton({
   dates,
@@ -100,11 +59,9 @@ export function GCalButton({
             });
           }
         } catch {
-          // Skip dates that fail to fetch
         }
       }
 
-      // Merge conflicts across all dates (they'll be filtered per-date in the UI)
       const allConflicts = new Set<string>();
       for (const date of dates) {
         for (const slot of getConflictingSlots(
@@ -170,11 +127,9 @@ export function GCalButton({
   }, [fetchEvents]);
 
   const handleDisconnect = useCallback(() => {
-    // Revoke token if available
     if (window.gapi?.client) {
       window.gapi.client.setToken({ access_token: "" });
     }
-    // Clear conflicts and reset state
     onConflictsChange([]);
     setConnected(false);
     setError(null);
@@ -198,27 +153,13 @@ export function GCalButton({
           onClick={handleConnect}
           disabled={loading}
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 14.17l6.59-6.59L19 9l-8 8z" />
-          </svg>
+          {CHECKMARK_SVG}
           {loading ? "Menghubungkan..." : "Hubungkan Google Calendar"}
         </button>
       ) : (
         <>
           <span className="ts-gcal-connected">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 14.17l6.59-6.59L19 9l-8 8z" />
-            </svg>
+            {CHECKMARK_SVG}
             Google Calendar terhubung
           </span>
           <button

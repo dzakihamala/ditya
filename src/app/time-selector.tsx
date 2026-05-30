@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { TimeGrid } from "./time-grid";
 import { GCalButton } from "./gcal";
 import { TutorialOverlay } from "./tutorial-overlay";
-import { slotsToRanges, getDateChipStatus } from "@/lib/time-selector";
+import { slotsToRanges, getDateChipStatus, getConflictsByDate, type GCalEvent } from "@/lib/time-selector";
 import { formatDateLong } from "@/lib/date-utils";
 
 interface TimeSelectorProps {
@@ -21,6 +21,7 @@ interface TimeSelectorProps {
   modifyDate?: string;
   onModifyDone?: () => void;
   initialConflictsByDate?: Record<string, string[]>;
+  initialGcalEvents?: GCalEvent[];
 }
 
 export function TimeSelector({
@@ -36,6 +37,7 @@ export function TimeSelector({
   modifyDate,
   onModifyDone,
   initialConflictsByDate = {},
+  initialGcalEvents = [],
 }: TimeSelectorProps) {
   const [availability, setAvailability] = useState<
     Record<string, string[]>
@@ -62,6 +64,8 @@ export function TimeSelector({
   const [conflictsByDate, setConflictsByDate] = useState<
     Record<string, string[]>
   >(initialConflictsByDate);
+
+  const [gcalEvents, setGcalEvents] = useState<GCalEvent[]>(initialGcalEvents);
 
   const activeDate = modifyDate ?? dates[activeIndex];
   const selectedSlots = availability[activeDate] ?? [];
@@ -125,7 +129,14 @@ export function TimeSelector({
           dates={dates}
           startHour={startHour}
           endHour={endHour}
-          onConflictsChange={setConflictsByDate}
+          onConflictsChange={(c) => {
+            if (Object.keys(c).length === 0) setGcalEvents([]);
+            setConflictsByDate(c);
+          }}
+          onEventsFetched={(events) => {
+            setGcalEvents(events);
+            setConflictsByDate(getConflictsByDate(events, dates, startHour, endHour));
+          }}
         />
 
         <TimeGrid
@@ -133,7 +144,7 @@ export function TimeSelector({
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={conflictsByDate}
+          conflictEvents={gcalEvents}
           onChange={handleGridChange}
         />
 

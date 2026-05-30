@@ -215,6 +215,62 @@ export function slotsInTimeRange(
   });
 }
 
+export interface ConflictBlock {
+  date: string;
+  startTime: string;
+  endTime: string;
+  summary?: string;
+}
+
+/** Build conflict blocks from GCal events, clipped to meeting hours per date. */
+export function buildConflictBlocks(
+  events: GCalEvent[],
+  dates: string[],
+  startHour: number,
+  endHour: number,
+): ConflictBlock[] {
+  const blocks: ConflictBlock[] = [];
+  const meetingStartMin = startHour * 60;
+  const meetingEndMin = endHour * 60;
+
+  for (const date of dates) {
+    const dateStart = new Date(date + "T00:00:00");
+    const dateEnd = new Date(date + "T23:59:59");
+
+    for (const event of events) {
+      const eventStart = parseGCalInstant(event.start);
+      const eventEnd = parseGCalInstant(event.end);
+      if (isNaN(eventStart.getTime()) || isNaN(eventEnd.getTime())) continue;
+      if (eventEnd <= dateStart || eventStart >= dateEnd) continue;
+
+      const overlapStart = Math.max(eventStart.getTime(), dateStart.getTime());
+      const overlapEnd = Math.min(eventEnd.getTime(), dateEnd.getTime());
+      const startDate = new Date(overlapStart);
+      const endDate = new Date(overlapEnd);
+      const startMin = startDate.getHours() * 60 + startDate.getMinutes();
+      const endMin = endDate.getHours() * 60 + endDate.getMinutes();
+
+      const clippedStart = Math.max(startMin, meetingStartMin);
+      const clippedEnd = Math.min(endMin, meetingEndMin);
+      if (clippedStart >= clippedEnd) continue;
+
+      const sh = Math.floor(clippedStart / 60);
+      const sm = clippedStart % 60;
+      const eh = Math.floor(clippedEnd / 60);
+      const em = clippedEnd % 60;
+
+      blocks.push({
+        date,
+        startTime: `${String(sh).padStart(2, "0")}:${String(sm).padStart(2, "0")}`,
+        endTime: `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`,
+        summary: event.summary,
+      });
+    }
+  }
+
+  return blocks;
+}
+
 export function getConflictsByDate(
   events: GCalEvent[],
   dates: string[],

@@ -22,7 +22,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={emptyAvailability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -40,7 +40,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={emptyAvailability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -56,7 +56,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={emptyAvailability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -75,7 +75,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={emptyAvailability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -91,7 +91,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={emptyAvailability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -110,7 +110,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -127,7 +127,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -147,7 +147,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -159,14 +159,16 @@ describe("TimeGrid", () => {
 
   describe("GCal conflicts", () => {
     it("renders gray transparent blocks for GCal-only conflicts", () => {
-      const conflicts = { "2026-06-15": ["09:00", "09:30"] };
+      const events = [
+        { start: "2026-06-15T09:00:00", end: "2026-06-15T10:00:00", summary: "Rapat Pagi" },
+      ];
       const { container } = render(
         <TimeGrid
           dates={dates}
           startHour={startHour}
           endHour={endHour}
           availability={emptyAvailability}
-          conflicts={conflicts}
+          conflictEvents={events}
           onChange={onChange}
         />,
       );
@@ -175,22 +177,91 @@ describe("TimeGrid", () => {
       expect(conflictBlocks).toHaveLength(1);
     });
 
-    it("renders conflict+selected blocks with right-strip indicator", () => {
+    it("renders event name on gray conflict block", () => {
+      const events = [
+        { start: "2026-06-15T09:00:00", end: "2026-06-15T10:00:00", summary: "Rapat Pagi" },
+      ];
+      const { container } = render(
+        <TimeGrid
+          dates={dates}
+          startHour={startHour}
+          endHour={endHour}
+          availability={emptyAvailability}
+          conflictEvents={events}
+          onChange={onChange}
+        />,
+      );
+
+      expect(container.textContent).toContain("Rapat Pagi");
+    });
+
+    it("renders conflict+selected blocks with proportional overlap strip", () => {
       const availability = { "2026-06-15": ["08:00", "08:30"] };
-      const conflicts = { "2026-06-15": ["08:00"] };
+      const events = [
+        { start: "2026-06-15T08:00:00", end: "2026-06-15T09:00:00", summary: "Meeting" },
+      ];
       const { container } = render(
         <TimeGrid
           dates={dates}
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={conflicts}
+          conflictEvents={events}
           onChange={onChange}
         />,
       );
 
-      const block = container.querySelector(".tg-block.has-conflict");
-      expect(block).toBeTruthy();
+      const strip = container.querySelector(".tg-overlap-strip");
+      expect(strip).toBeTruthy();
+    });
+
+    it("shows partial overlap strip when event starts before block", () => {
+      const availability = { "2026-06-15": ["09:00", "09:30"] };
+      const events = [
+        { start: "2026-06-15T08:30:00", end: "2026-06-15T09:30:00", summary: "Early start" },
+      ];
+      const { container } = render(
+        <TimeGrid
+          dates={dates}
+          startHour={startHour}
+          endHour={endHour}
+          availability={availability}
+          conflictEvents={events}
+          onChange={onChange}
+        />,
+      );
+
+      const strip = container.querySelector(".tg-overlap-strip") as HTMLElement;
+      expect(strip).toBeTruthy();
+      // Event 08:30-09:30 overlaps block 09:00-10:00 from 09:00-09:30
+      // That's 50% of the block → height should be ~50%
+      const heightPct = parseFloat(strip.style.height);
+      expect(heightPct).toBe(50);
+      expect(strip.style.top).toBe("0%");
+    });
+
+    it("shows partial overlap strip when event ends mid-block", () => {
+      const availability = { "2026-06-15": ["08:00", "08:30"] };
+      const events = [
+        { start: "2026-06-15T08:00:00", end: "2026-06-15T08:30:00", summary: "Short event" },
+      ];
+      const { container } = render(
+        <TimeGrid
+          dates={dates}
+          startHour={startHour}
+          endHour={endHour}
+          availability={availability}
+          conflictEvents={events}
+          onChange={onChange}
+        />,
+      );
+
+      const strip = container.querySelector(".tg-overlap-strip") as HTMLElement;
+      expect(strip).toBeTruthy();
+      // Event 08:00-08:30 overlaps block 08:00-09:00 — first slot only
+      // Block duration = 60 min (2 slots), overlap = 30 min (1 slot)
+      expect(strip.style.top).toBe("0%");
+      expect(parseFloat(strip.style.height)).toBe(50);
     });
   });
 
@@ -202,7 +273,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={emptyAvailability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -227,7 +298,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -256,7 +327,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -283,7 +354,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -313,7 +384,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -345,7 +416,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -365,7 +436,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -389,7 +460,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -416,7 +487,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -442,7 +513,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -468,7 +539,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -491,7 +562,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -519,7 +590,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -541,7 +612,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={availability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -558,7 +629,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={emptyAvailability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );
@@ -575,7 +646,7 @@ describe("TimeGrid", () => {
           startHour={startHour}
           endHour={endHour}
           availability={emptyAvailability}
-          conflicts={{}}
+          conflictEvents={[]}
           onChange={onChange}
         />,
       );

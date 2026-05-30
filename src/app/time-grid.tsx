@@ -10,7 +10,8 @@ import {
   add30Minutes,
   subtract30Minutes,
   timeToMinutes,
-  slotsInTimeRange,
+  buildConflictBlocks,
+  type GCalEvent,
 } from "@/lib/time-selector";
 
 const CELL_HEIGHT = 28;
@@ -24,7 +25,7 @@ interface TimeGridProps {
   startHour: number;
   endHour: number;
   availability: Record<string, string[]>;
-  conflicts: Record<string, string[]>;
+  conflictEvents?: GCalEvent[];
   onChange: (updates: Record<string, string[]>) => void;
 }
 
@@ -132,7 +133,7 @@ export function TimeGrid({
   startHour,
   endHour,
   availability,
-  conflicts,
+  conflictEvents = [],
   onChange,
 }: TimeGridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
@@ -149,7 +150,7 @@ export function TimeGrid({
   const gridHeight = totalRows * CELL_HEIGHT;
   const gridWidth = dates.length * COL_WIDTH;
   const blocks = getBlocks(availability, dates);
-  const conflictBlocks = getBlocks(conflicts, dates);
+  const conflictBlocks = buildConflictBlocks(conflictEvents, dates, startHour, endHour);
 
   const resolveGridPos = useCallback(
     (clientX: number, clientY: number) => {
@@ -491,6 +492,8 @@ export function TimeGrid({
                 const colIdx = dates.indexOf(b.date);
                 const topIdx = timeToSlotIndex(b.startTime, startHour);
                 const botIdx = timeToSlotIndex(b.endTime, startHour);
+                const height = (botIdx - topIdx) * CELL_HEIGHT - BLOCK_PAD * 2;
+                const showName = height >= 16 && b.summary;
                 return (
                   <div
                     key={`conflict-${i}`}
@@ -499,9 +502,13 @@ export function TimeGrid({
                       left: colIdx * COL_WIDTH + BLOCK_PAD,
                       top: topIdx * CELL_HEIGHT + BLOCK_PAD,
                       width: COL_WIDTH - BLOCK_PAD * 2,
-                      height: (botIdx - topIdx) * CELL_HEIGHT - BLOCK_PAD * 2,
+                      height,
                     }}
-                  />
+                  >
+                    {showName && (
+                      <span className="tg-conflict-name">{b.summary}</span>
+                    )}
+                  </div>
                 );
               })}
 
@@ -509,19 +516,33 @@ export function TimeGrid({
                 const colIdx = dates.indexOf(b.date);
                 const topIdx = timeToSlotIndex(b.startTime, startHour);
                 const botIdx = timeToSlotIndex(b.endTime, startHour);
-                const dateConflicts = conflicts[b.date] ?? [];
-                const blockSlots = slotsInTimeRange(
-                  b.startTime,
-                  b.endTime,
-                  startHour,
-                  endHour,
-                );
-                const hasConflict = blockSlots.some((s) => dateConflicts.includes(s));
+                const blockDuration = timeToMinutes(b.endTime) - timeToMinutes(b.startTime);
                 const dragging = isBlockDragging(renderDrag, b);
+
+                // Compute proportional overlap strips
+                const overlaps = conflictBlocks
+                  .filter((cb) => {
+                    if (cb.date !== b.date) return false;
+                    const cbStart = timeToMinutes(cb.startTime);
+                    const cbEnd = timeToMinutes(cb.endTime);
+                    const bStart = timeToMinutes(b.startTime);
+                    const bEnd = timeToMinutes(b.endTime);
+                    return cbStart < bEnd && cbEnd > bStart;
+                  })
+                  .map((cb) => {
+                    const ovStart = Math.max(timeToMinutes(cb.startTime), timeToMinutes(b.startTime));
+                    const ovEnd = Math.min(timeToMinutes(cb.endTime), timeToMinutes(b.endTime));
+                    const topPct = ((ovStart - timeToMinutes(b.startTime)) / blockDuration) * 100;
+                    const heightPct = ((ovEnd - ovStart) / blockDuration) * 100;
+                    return { topPct, heightPct, summary: cb.summary };
+                  });
+
+                const hasConflict = overlaps.length > 0;
+
                 return (
                   <div
                     key={`block-${i}`}
-                    className={`tg-block${hasConflict ? " has-conflict" : ""}${dragging ? " tg-block-dragging" : ""}`}
+                    className={`tg-block${dragging ? " tg-block-dragging" : ""}`}
                     style={{
                       left: colIdx * COL_WIDTH + BLOCK_PAD,
                       top: topIdx * CELL_HEIGHT + BLOCK_PAD,
@@ -534,6 +555,17 @@ export function TimeGrid({
                     <div className="tg-block-handle tg-block-handle-top" />
                     <div className="tg-block-body" />
                     <div className="tg-block-handle tg-block-handle-bot" />
+                    {overlaps.map((ov, j) => (
+                      <div
+                        key={`ov-${j}`}
+                        className="tg-overlap-strip"
+                        style={{
+                          top: `${ov.topPct}%`,
+                          height: `${ov.heightPct}%`,
+                        }}
+                        title={ov.summary ?? ""}
+                      />
+                    ))}
                   </div>
                 );
               })}

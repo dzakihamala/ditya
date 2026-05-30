@@ -541,6 +541,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
           endHour={wizard.endHour}
           initialAvailability={wizard.availability}
           initialConflictsByDate={wizard.conflictsByDate}
+          initialGcalEvents={wizard.gcalEvents}
           onSave={inModifyMode ? handleModifySaveSlot : handleSaveSlot}
           onNext={handleNextDate}
           onDateChange={handleDateChange}

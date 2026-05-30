@@ -1,3 +1,7 @@
+function toDate(isoStr: string): Date {
+  return new Date(isoStr + "T00:00:00");
+}
+
 export function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
 }
@@ -39,8 +43,8 @@ export function toggleDate(dates: string[], date: string): string[] {
 }
 
 export function selectDateRange(dates: string[], start: string, end: string): string[] {
-  const startDate = new Date(start + "T00:00:00");
-  const endDate = new Date(end + "T00:00:00");
+  const startDate = toDate(start);
+  const endDate = toDate(end);
   const [from, to] = startDate <= endDate ? [startDate, endDate] : [endDate, startDate];
 
   const rangeSet = new Set(dates);
@@ -83,12 +87,12 @@ const MONTHS = [
 const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 
 export function formatDateShort(isoStr: string): string {
-  const d = new Date(isoStr + "T00:00:00");
+  const d = toDate(isoStr);
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 export function formatDateLong(isoStr: string): string {
-  const d = new Date(isoStr + "T00:00:00");
+  const d = toDate(isoStr);
   return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
@@ -99,8 +103,8 @@ export function groupConsecutiveDates(dates: string[]): string[][] {
   const groups: string[][] = [[sorted[0]]];
 
   for (let i = 1; i < sorted.length; i++) {
-    const prev = new Date(sorted[i - 1] + "T00:00:00");
-    const curr = new Date(sorted[i] + "T00:00:00");
+    const prev = toDate(sorted[i - 1]);
+    const curr = toDate(sorted[i]);
     const diffDays = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
 
     if (diffDays === 1) {
@@ -120,16 +124,16 @@ export function formatDateGroups(dates: string[]): string {
 
   return groups.map((group) => {
     const first = group[0];
-    const last = group[group.length - 1];
-    const firstDate = new Date(first + "T00:00:00");
-    const lastDate = new Date(last + "T00:00:00");
-
+    const firstDate = toDate(first);
     const firstMonth = MONTHS[firstDate.getMonth()];
-    const lastMonth = MONTHS[lastDate.getMonth()];
 
     if (group.length === 1) {
       return `${firstDate.getDate()} ${firstMonth}`;
     }
+
+    const last = group[group.length - 1];
+    const lastDate = toDate(last);
+    const lastMonth = MONTHS[lastDate.getMonth()];
 
     if (firstMonth === lastMonth) {
       return `${firstDate.getDate()}–${lastDate.getDate()} ${firstMonth}`;

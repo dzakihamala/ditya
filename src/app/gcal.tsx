@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { getConflictsByDate, type GCalEvent } from "@/lib/time-selector";
 import { formatDateLong } from "@/lib/date-utils";
 
@@ -59,6 +59,37 @@ export function GCalButton({
   const [connected, setConnected] = useState(initialConnected ?? false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [gapiReady, setGapiReady] = useState(false);
+
+  // Pre-load gapi client on mount so the OAuth popup is triggered
+  // synchronously from the click handler (browsers block async popups).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!CLIENT_ID || !API_KEY) return;
+
+    let cancelled = false;
+
+    const load = () => {
+      if (!window.gapi) {
+        // gapi script not loaded yet, retry in 500ms
+        setTimeout(load, 500);
+        return;
+      }
+      window.gapi.load("client", async () => {
+        if (cancelled) return;
+        try {
+          await window.gapi.client.init({ apiKey: API_KEY });
+          setGapiReady(true);
+        } catch {
+          // Will show error when user clicks connect
+        }
+      });
+    };
+
+    // Small delay to let async scripts finish loading
+    setTimeout(load, 500);
+    return () => { cancelled = true; };
+  }, []);
 
   const fetchEvents = useCallback(
     async (accessToken: string) => {
@@ -114,7 +145,7 @@ export function GCalButton({
       return;
     }
 
-    if (!window.gapi || !window.google?.accounts?.oauth2) {
+    if (!gapiReady || !window.google?.accounts?.oauth2) {
       setError(
         "Google Calendar belum tersedia. Tunggu beberapa saat dan coba lagi.",
       );
@@ -124,34 +155,28 @@ export function GCalButton({
     setLoading(true);
     setError(null);
 
-    window.gapi.load("client", async () => {
-      try {
-        await window.gapi.client.init({
-          apiKey: API_KEY,
-        });
-
-        const tokenClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: CLIENT_ID,
-          scope: SCOPES,
-          callback: async (resp: TokenResponse) => {
-            if (resp.error) {
-              setError("Gagal menghubungkan Google Calendar.");
-              setLoading(false);
-              return;
-            }
-            await fetchEvents(resp.access_token);
-            setConnected(true);
+    try {
+      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        callback: async (resp: TokenResponse) => {
+          if (resp.error) {
+            setError("Gagal menghubungkan Google Calendar.");
             setLoading(false);
-          },
-        });
+            return;
+          }
+          await fetchEvents(resp.access_token);
+          setConnected(true);
+          setLoading(false);
+        },
+      });
 
-        tokenClient.requestAccessToken();
-      } catch {
-        setError("Gagal menginisialisasi Google API.");
-        setLoading(false);
-      }
-    });
-  }, [fetchEvents, onEventsFetched]);
+      tokenClient.requestAccessToken();
+    } catch {
+      setError("Gagal menginisialisasi Google API.");
+      setLoading(false);
+    }
+  }, [fetchEvents, gapiReady]);
 
   const handleDisconnect = useCallback(() => {
     if (window.gapi?.client) {

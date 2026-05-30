@@ -1060,6 +1060,8 @@ body {
 .trp-chip:hover .trp-chip-x {
   color: var(--red);
 }
+
+.time-list {
   display: flex;
   flex-direction: column;
   gap: 2px;

@@ -8,7 +8,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "sandcastle": "npx tsx .sandcastle/main.mts && powershell -c \"[System.Console]::Beep(800,200); [System.Console]::Beep(1000,200); [System.Console]::Beep(1200,400)\""
   },
   "dependencies": {
     "firebase": "^11.6.0",
@@ -28,6 +29,7 @@
     "jsdom": "^26.1.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.22.3",
     "typescript": "^5.8.3",
     "vitest": "^3.1.1"
   }

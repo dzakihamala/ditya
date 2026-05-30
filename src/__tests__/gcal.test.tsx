@@ -247,4 +247,153 @@ describe("GCalButton — connect and disconnect flow", () => {
       "Gagal menghubungkan Google Calendar",
     );
   });
+
+  it("calls onEventsFetched with raw events after successful auth", async () => {
+    const onConflictsChange = vi.fn();
+    const onEventsFetched = vi.fn();
+    const { GCalButton } = await import("@/app/gcal");
+    const { container } = render(
+      <GCalButton
+        dates={["2026-06-15"]}
+        startHour={8}
+        endHour={17}
+        onConflictsChange={onConflictsChange}
+        onEventsFetched={onEventsFetched}
+      />,
+    );
+
+    const btn = container.querySelector(".ts-gcal-btn") as HTMLButtonElement;
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+
+    expect(onEventsFetched).toHaveBeenCalled();
+    const events = onEventsFetched.mock.calls[0][0];
+    expect(events).toHaveLength(1);
+    expect(events[0].summary).toBe("Test Event");
+    expect(onConflictsChange).not.toHaveBeenCalled();
+  });
+
+  it("starts in connected state when initialConnected is true", async () => {
+    const { GCalButton } = await import("@/app/gcal");
+    const { container } = render(
+      <GCalButton
+        dates={["2026-06-15"]}
+        startHour={8}
+        endHour={17}
+        onConflictsChange={vi.fn()}
+        initialConnected={true}
+      />,
+    );
+
+    expect(container.textContent).toContain("Google Calendar terhubung");
+    expect(container.textContent).toContain("Putuskan");
+  });
+});
+
+describe("GCalConflictPanel", () => {
+  const DATES = ["2026-06-15", "2026-06-16"];
+
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("shows events with checkboxes default OFF", async () => {
+    const { GCalConflictPanel } = await import("@/app/gcal");
+    const onConfirm = vi.fn();
+
+    const events = [
+      { start: "2026-06-15T09:00:00", end: "2026-06-15T10:00:00", summary: "Rapat Pagi" },
+      { start: "2026-06-15T14:00:00", end: "2026-06-15T15:00:00", summary: "Dentist" },
+    ];
+
+    const { container } = render(
+      <GCalConflictPanel
+        events={events}
+        dates={DATES}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    expect(container.textContent).toContain("Kamu tidak bisa ikut pertemuan pada acara yang mana?");
+    expect(container.textContent).toContain("Rapat Pagi");
+    expect(container.textContent).toContain("Dentist");
+
+    const checkboxes = container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+    expect(checkboxes).toHaveLength(2);
+    checkboxes.forEach((cb) => expect(cb.checked).toBe(false));
+  });
+
+  it("calls onConfirm with only checked events", async () => {
+    const { GCalConflictPanel } = await import("@/app/gcal");
+    const onConfirm = vi.fn();
+
+    const events = [
+      { start: "2026-06-15T09:00:00", end: "2026-06-15T10:00:00", summary: "Rapat Pagi" },
+      { start: "2026-06-15T14:00:00", end: "2026-06-15T15:00:00", summary: "Dentist" },
+    ];
+
+    const { container } = render(
+      <GCalConflictPanel
+        events={events}
+        dates={DATES}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    const checkboxes = container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+    await act(async () => {
+      fireEvent.click(checkboxes[0]); // Check first one
+    });
+
+    const btn = container.querySelector("button") as HTMLButtonElement;
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith([events[0]]);
+  });
+
+  it("shows empty state when no events", async () => {
+    const { GCalConflictPanel } = await import("@/app/gcal");
+    const onConfirm = vi.fn();
+
+    const { container } = render(
+      <GCalConflictPanel
+        events={[]}
+        dates={DATES}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    expect(container.textContent).toContain("Tidak ada acara yang bentrok");
+
+    const btn = container.querySelector("button") as HTMLButtonElement;
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith([]);
+  });
+
+  it("filters out events that do not overlap with meeting dates", async () => {
+    const { GCalConflictPanel } = await import("@/app/gcal");
+    const onConfirm = vi.fn();
+
+    const events = [
+      { start: "2026-06-15T09:00:00", end: "2026-06-15T10:00:00", summary: "On Date" },
+      { start: "2026-06-20T09:00:00", end: "2026-06-20T10:00:00", summary: "Off Date" },
+    ];
+
+    const { container } = render(
+      <GCalConflictPanel
+        events={events}
+        dates={DATES}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    expect(container.textContent).toContain("On Date");
+    expect(container.textContent).not.toContain("Off Date");
+  });
 });

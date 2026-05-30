@@ -7,6 +7,7 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { TimeSelector } from "./time-selector";
 import { Review } from "./review";
 import { DateChips } from "./date-chips";
+import { GCalButton, GCalConflictPanel } from "./gcal";
 import { formatDateLong } from "@/lib/date-utils";
 import { useToast } from "@/lib/use-toast";
 import {
@@ -14,6 +15,7 @@ import {
   wizardReducer,
   getReviewItems,
 } from "@/lib/wizard";
+import { getConflictingSlots, type GCalEvent } from "@/lib/time-selector";
 
 type ExistingParticipant = {
   id: string;
@@ -162,9 +164,31 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
     dispatch({ type: "SKIP_GCAL" });
   }, []);
 
-  const handleGcalConnected = useCallback(() => {
-    dispatch({ type: "GCAL_CONNECTED" });
+  const handleGcalEventsFetched = useCallback((events: GCalEvent[]) => {
+    dispatch({ type: "GCAL_EVENTS_LOADED", events });
   }, []);
+
+  const handleGcalConflictsConfirmed = useCallback(
+    (selectedEvents: GCalEvent[]) => {
+      const allConflicts = new Set<string>();
+      for (const date of wizard.dates) {
+        for (const slot of getConflictingSlots(
+          selectedEvents,
+          date,
+          wizard.startHour,
+          wizard.endHour,
+        )) {
+          allConflicts.add(slot);
+        }
+      }
+      dispatch({
+        type: "GCAL_CONFLICTS_CONFIRMED",
+        conflictSlots: Array.from(allConflicts).sort(),
+        selectedEvents,
+      });
+    },
+    [wizard.dates, wizard.startHour, wizard.endHour],
+  );
 
   const handleSaveSlot = useCallback(
     async (date: string, slots: string[]) => {
@@ -347,13 +371,15 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
             sebagai informasi — Anda tetap bisa memilihnya.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <button
-              className="btn btn-g"
-              onClick={handleGcalConnected}
-              style={{ width: "100%" }}
-            >
-              Hubungkan Google Calendar
-            </button>
+            <div style={{ width: "100%" }}>
+              <GCalButton
+                dates={wizard.dates}
+                startHour={wizard.startHour}
+                endHour={wizard.endHour}
+                onConflictsChange={() => {}}
+                onEventsFetched={handleGcalEventsFetched}
+              />
+            </div>
             <button
               className="btn btn-o"
               onClick={handleSkipGcal}
@@ -376,8 +402,21 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         </div>
       </div>
     );
-  } else if (wizard.step === "modify") {
-    // ---- MODIFY STEP: Modify flow entry ----
+  }
+
+  // ---- STEP 2.5: GCal conflict panel ----
+  if (wizard.step === "gcal-conflicts") {
+    return (
+      <GCalConflictPanel
+        events={wizard.gcalEvents}
+        dates={wizard.dates}
+        onConfirm={handleGcalConflictsConfirmed}
+      />
+    );
+  }
+
+  // ---- MODIFY STEP: Modify flow entry ----
+  if (wizard.step === "modify") {
     const items = getReviewItems(wizard.availability, wizard.dates);
     content = (
       <div className="wizard-wrap wizard-step" style={{ padding: "28px 24px" }}>
@@ -502,6 +541,8 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
           onGoToReview={inModifyMode ? undefined : handleGoToReview}
           modifyDate={inModifyMode ? wizard.dates[wizard.activeDateIndex] : undefined}
           onModifyDone={inModifyMode ? handleModifyDone : undefined}
+          gcalInitiallyConnected={wizard.gcalConnected}
+          initialConflicts={wizard.conflictSlots}
         />
       </div>
     );

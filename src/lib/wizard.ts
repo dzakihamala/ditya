@@ -1,9 +1,10 @@
-import { slotsToRanges } from "./time-selector";
+import { slotsToRanges, type GCalEvent } from "./time-selector";
 
 export type WizardStep =
   | "loading"
   | "input"
   | "gcal"
+  | "gcal-conflicts"
   | "select-time"
   | "modify"
   | "review"
@@ -20,6 +21,8 @@ export interface WizardState {
   endHour: number;
   error: string | null;
   gcalConnected: boolean;
+  gcalEvents: GCalEvent[];
+  conflictSlots: string[];
   confirmedAt: string | null;
   meetingTitle: string;
   isModifyMode: boolean;
@@ -31,6 +34,8 @@ export type WizardAction =
   | { type: "NAME_CONFIRMED"; displayName: string; participantId: string; availability?: Record<string, string[]> }
   | { type: "SKIP_GCAL" }
   | { type: "GCAL_CONNECTED" }
+  | { type: "GCAL_EVENTS_LOADED"; events: GCalEvent[] }
+  | { type: "GCAL_CONFLICTS_CONFIRMED"; conflictSlots: string[]; selectedEvents: GCalEvent[] }
   | { type: "SET_DATE_INDEX"; index: number }
   | { type: "UPDATE_SLOTS"; date: string; slots: string[] }
   | { type: "GO_TO_REVIEW" }
@@ -55,6 +60,8 @@ export function createInitialState(): WizardState {
     endHour: 17,
     error: null,
     gcalConnected: false,
+    gcalEvents: [],
+    conflictSlots: [],
     confirmedAt: null,
     meetingTitle: "",
     isModifyMode: false,
@@ -102,8 +109,25 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
     case "GCAL_CONNECTED":
       return {
         ...state,
+        step: "gcal-conflicts",
+        gcalConnected: true,
+        gcalEvents: [],
+      };
+
+    case "GCAL_EVENTS_LOADED":
+      return {
+        ...state,
+        step: "gcal-conflicts",
+        gcalConnected: true,
+        gcalEvents: action.events,
+      };
+
+    case "GCAL_CONFLICTS_CONFIRMED":
+      return {
+        ...state,
         step: "select-time",
         gcalConnected: true,
+        conflictSlots: action.conflictSlots,
       };
 
     case "SET_DATE_INDEX": {

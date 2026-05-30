@@ -21,6 +21,8 @@ interface TimeSelectorProps {
   onGoToReview?: () => void;
   modifyDate?: string;
   onModifyDone?: () => void;
+  gcalInitiallyConnected?: boolean;
+  initialConflicts?: string[];
 }
 
 export function TimeSelector({
@@ -35,6 +37,8 @@ export function TimeSelector({
   onGoToReview,
   modifyDate,
   onModifyDone,
+  gcalInitiallyConnected,
+  initialConflicts,
 }: TimeSelectorProps) {
   const [availability, setAvailability] = useState<
     Record<string, string[]>
@@ -57,7 +61,7 @@ export function TimeSelector({
     [controlledIndex],
   );
 
-  const [conflicts, setConflicts] = useState<string[]>([]);
+  const [conflicts, setConflicts] = useState<string[]>(initialConflicts ?? []);
 
   const activeDate = dates[activeIndex];
   const selectedSlots = availability[activeDate] ?? [];
@@ -160,6 +164,7 @@ export function TimeSelector({
           startHour={startHour}
           endHour={endHour}
           onConflictsChange={setConflicts}
+          initialConnected={gcalInitiallyConnected}
         />
 
         <TimeBar

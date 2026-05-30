@@ -1,16 +1,16 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { hashPassword } from "@/lib/hash";
 
 const MASTER_KEY_HASH =
   "e14cb9e5c0eeee0ea313a4e04fbd10aa17ac17aa33a3cad4bdfe74b87ca18ef8";
 
-interface AdminUser {
-  u: string;
-  p: string;
+interface AdminEntry {
+  uid: string;
+  email: string;
 }
 
 interface Toast {
@@ -23,12 +23,13 @@ interface Toast {
 export default function SuperAdminPage() {
   const [key, setKey] = useState("");
   const [unlocked, setUnlocked] = useState(false);
-  const [admins, setAdmins] = useState<AdminUser[]>([]);
-  const [newUser, setNewUser] = useState("");
+  const [admins, setAdmins] = useState<AdminEntry[]>([]);
+  const [newEmail, setNewEmail] = useState("");
   const [newPass, setNewPass] = useState("");
-  const [confirmTarget, setConfirmTarget] = useState<string | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<AdminEntry | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [checkingKey, setCheckingKey] = useState(false);
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
 
   const showToast = (msg: string, type: "ok" | "err" = "ok") => {
     const id = Date.now();
@@ -68,44 +69,67 @@ export default function SuperAdminPage() {
   };
 
   const loadAdmins = async () => {
+    setLoadingAdmins(true);
     try {
-      const snap = await getDoc(doc(db, "system_config", "admin_creds"));
-      if (snap.exists()) setAdmins(snap.data().users ?? []);
+      const res = await fetch("/api/admin/users");
+      const data = await res.json();
+      if (res.ok) {
+        setAdmins(data.users);
+      } else {
+        showToast(data.error ?? "Gagal memuat admin.", "err");
+      }
     } catch {
-      showToast("Gagal memuat data admin.", "err");
+      showToast("Gagal terhubung ke server.", "err");
     }
+    setLoadingAdmins(false);
   };
 
   const addAdmin = async (e: FormEvent) => {
     e.preventDefault();
-    if (!newUser || !newPass) return;
+    if (!newEmail || !newPass) return;
 
-    if (admins.some((a) => a.u.toLowerCase() === newUser.trim().toLowerCase())) {
-      showToast("Username sudah ada!", "err");
+    const normalized = newEmail.trim().toLowerCase();
+    if (admins.some((a) => a.email.toLowerCase() === normalized)) {
+      showToast("Email sudah terdaftar!", "err");
       return;
     }
 
-    const hashedP = await hashPassword(newPass);
-    const updated = [...admins, { u: newUser.trim(), p: hashedP }];
-    await setDoc(doc(db, "system_config", "admin_creds"), {
-      users: updated,
-      masterKeyHash: MASTER_KEY_HASH,
-    });
-    setAdmins(updated);
-    setNewUser("");
-    setNewPass("");
-    showToast("Admin berhasil ditambahkan!", "ok");
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalized, password: newPass }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast("Admin berhasil ditambahkan!", "ok");
+        loadAdmins();
+        setNewEmail("");
+        setNewPass("");
+      } else {
+        showToast(data.error ?? "Gagal menambah admin.", "err");
+      }
+    } catch {
+      showToast("Gagal terhubung ke server.", "err");
+    }
   };
 
-  const deleteAdmin = async (username: string) => {
-    const updated = admins.filter((a) => a.u !== username);
-    await setDoc(doc(db, "system_config", "admin_creds"), {
-      users: updated,
-      masterKeyHash: MASTER_KEY_HASH,
-    });
-    setAdmins(updated);
+  const deleteAdmin = async (target: AdminEntry) => {
+    try {
+      const res = await fetch(`/api/admin/users?uid=${encodeURIComponent(target.uid)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setAdmins((prev) => prev.filter((a) => a.uid !== target.uid));
+        showToast("Admin dihapus.", "ok");
+      } else {
+        const data = await res.json();
+        showToast(data.error ?? "Gagal menghapus admin.", "err");
+      }
+    } catch {
+      showToast("Gagal terhubung ke server.", "err");
+    }
     setConfirmTarget(null);
-    showToast("Admin dihapus.", "ok");
   };
 
   if (!unlocked) {
@@ -170,7 +194,7 @@ export default function SuperAdminPage() {
       <ToastContainer toasts={toasts} />
       {confirmTarget && (
         <ConfirmDialog
-          message={`Hapus admin "${confirmTarget}" dari sistem?`}
+          message={`Hapus admin "${confirmTarget.email}" dari sistem?`}
           onConfirm={() => deleteAdmin(confirmTarget)}
           onCancel={() => setConfirmTarget(null)}
         />
@@ -196,19 +220,18 @@ export default function SuperAdminPage() {
             Kelola Admin
           </h1>
           <div className="admin-list">
-            {admins.length === 0 ? (
+            {loadingAdmins ? (
+              <div className="admin-empty">Memuat...</div>
+            ) : admins.length === 0 ? (
               <div className="admin-empty">Belum ada admin. Buat di bawah.</div>
             ) : (
               admins.map((a) => (
-                <div key={a.u} className="admin-item">
+                <div key={a.uid} className="admin-item">
                   <div>
-                    <div className="admin-name">{a.u}</div>
-                    <div className="admin-pass">
-                      {a.p.length > 20 ? "••••••••" : a.p}
-                    </div>
+                    <div className="admin-name">{a.email}</div>
                   </div>
                   <button
-                    onClick={() => setConfirmTarget(a.u)}
+                    onClick={() => setConfirmTarget(a)}
                     className="btn btn-r"
                   >
                     Hapus
@@ -222,10 +245,11 @@ export default function SuperAdminPage() {
           <form onSubmit={addAdmin}>
             <div className="form-row">
               <input
-                value={newUser}
-                onChange={(e) => setNewUser(e.target.value)}
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
                 className="input"
-                placeholder="Username"
+                placeholder="Email"
+                type="email"
                 required
               />
               <input

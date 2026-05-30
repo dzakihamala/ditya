@@ -27,6 +27,18 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" className={`${dmSans.variable} ${dmMono.variable}`}>
+      <head>
+        <script
+          src="https://accounts.google.com/gsi/client"
+          async
+          defer
+        />
+        <script
+          src="https://apis.google.com/js/api.js"
+          async
+          defer
+        />
+      </head>
       <body>
         <AuthProvider>{children}</AuthProvider>
       </body>

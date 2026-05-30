@@ -7,6 +7,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
+    exclude: ["**/.sandcastle/**", "**/node_modules/**"],
   },
   resolve: {
     alias: {

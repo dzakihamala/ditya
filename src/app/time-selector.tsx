@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { DateChips } from "./date-chips";
 import { TimeBar } from "./time-bar";
-import { TimeList } from "./time-list";
+import { TimeRangePicker } from "./time-range-picker";
 import { GCalButton } from "./gcal";
 import { slotsToRanges, getDateChipStatus } from "@/lib/time-selector";
 import { formatDateLong } from "@/lib/date-utils";
@@ -170,7 +170,7 @@ export function TimeSelector({
           onChange={handleSlotsChange}
         />
 
-        <TimeList
+        <TimeRangePicker
           selectedSlots={selectedSlots}
           startHour={startHour}
           endHour={endHour}

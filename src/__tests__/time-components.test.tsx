@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, fireEvent } from "@testing-library/react";
 import { DateChips } from "@/app/date-chips";
-import { TimeList } from "@/app/time-list";
+import { TimeRangePicker } from "@/app/time-range-picker";
 import { TimeBar } from "@/app/time-bar";
 
 describe("DateChips", () => {
@@ -102,91 +102,116 @@ describe("DateChips", () => {
   });
 });
 
-describe("TimeList", () => {
+describe("TimeRangePicker", () => {
   let onChange: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     onChange = vi.fn();
   });
 
-  it("renders all slots between startHour and endHour", () => {
+  it("renders Dari jam and Sampai jam labels", () => {
     const { container } = render(
-      <TimeList
+      <TimeRangePicker
         selectedSlots={[]}
         startHour={8}
-        endHour={10}
+        endHour={17}
         conflicts={[]}
         onChange={onChange}
       />,
     );
 
-    const rows = container.querySelectorAll(".time-list-row");
-    expect(rows).toHaveLength(4); // 08:00, 08:30, 09:00, 09:30
+    expect(container.textContent).toContain("Dari jam");
+    expect(container.textContent).toContain("Sampai jam");
   });
 
-  it("shows checkmark on selected slots", () => {
+  it("renders Seharian and Tambah buttons", () => {
     const { container } = render(
-      <TimeList
-        selectedSlots={["08:00", "09:00"]}
+      <TimeRangePicker
+        selectedSlots={[]}
         startHour={8}
-        endHour={10}
+        endHour={17}
         conflicts={[]}
         onChange={onChange}
       />,
     );
 
-    const indicators =
-      container.querySelectorAll(".time-list-indicator.sel");
-    expect(indicators).toHaveLength(2);
+    expect(container.textContent).toContain("Seharian");
+    expect(container.textContent).toContain("+ Tambah");
   });
 
-  it("marks conflict rows", () => {
+  it("displays range chips from selectedSlots", () => {
     const { container } = render(
-      <TimeList
-        selectedSlots={[]}
+      <TimeRangePicker
+        selectedSlots={["08:00", "08:30"]}
         startHour={8}
-        endHour={10}
-        conflicts={["08:30"]}
-        onChange={onChange}
-      />,
-    );
-
-    const conflictRows = container.querySelectorAll(
-      ".time-list-row.conflict",
-    );
-    expect(conflictRows).toHaveLength(1);
-  });
-
-  it("toggles slot on click", () => {
-    const { container } = render(
-      <TimeList
-        selectedSlots={[]}
-        startHour={8}
-        endHour={10}
+        endHour={17}
         conflicts={[]}
         onChange={onChange}
       />,
     );
 
-    fireEvent.click(container.querySelectorAll(".time-list-row")[0]);
-    expect(onChange).toHaveBeenCalledWith(["08:00"]);
+    const chips = container.querySelectorAll(".trp-chip");
+    expect(chips).toHaveLength(1);
+    expect(chips[0].textContent).toContain("08:00");
+    expect(chips[0].textContent).toContain("09:00");
   });
 
-  it("toggles slot on Enter key", () => {
+  it("displays multiple non-contiguous range chips", () => {
     const { container } = render(
-      <TimeList
-        selectedSlots={[]}
+      <TimeRangePicker
+        selectedSlots={["08:00", "08:30", "12:00", "12:30"]}
         startHour={8}
-        endHour={10}
+        endHour={17}
         conflicts={[]}
         onChange={onChange}
       />,
     );
 
-    fireEvent.keyDown(container.querySelectorAll(".time-list-row")[0], {
-      key: "Enter",
-    });
-    expect(onChange).toHaveBeenCalledWith(["08:00"]);
+    const chips = container.querySelectorAll(".trp-chip");
+    expect(chips).toHaveLength(2);
+  });
+
+  it("marks conflict chips", () => {
+    const { container } = render(
+      <TimeRangePicker
+        selectedSlots={["08:00", "08:30"]}
+        startHour={8}
+        endHour={17}
+        conflicts={["08:00"]}
+        onChange={onChange}
+      />,
+    );
+
+    const chip = container.querySelector(".trp-chip.conflict");
+    expect(chip).toBeTruthy();
+  });
+
+  it("shows conflict hint when conflicts exist", () => {
+    const { container } = render(
+      <TimeRangePicker
+        selectedSlots={[]}
+        startHour={8}
+        endHour={17}
+        conflicts={["08:00"]}
+        onChange={onChange}
+      />,
+    );
+
+    expect(container.textContent).toContain("Google Calendar");
+  });
+
+  it("does not show conflict hint when no conflicts", () => {
+    const { container } = render(
+      <TimeRangePicker
+        selectedSlots={[]}
+        startHour={8}
+        endHour={17}
+        conflicts={[]}
+        onChange={onChange}
+      />,
+    );
+
+    expect(container.textContent).not.toContain("Google Calendar");
   });
 });
 

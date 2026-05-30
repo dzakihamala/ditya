@@ -110,22 +110,30 @@ export function TimeBar({
     }
   }, [dragging]);
 
-  const hourLabels: string[] = [];
+  const hourMarks: { label: string; pixel: number }[] = [];
   let h = Math.floor(startHour);
   const endH = Math.ceil(endHour);
   while (h <= endH) {
     const labelH = h % 24;
-    hourLabels.push(
-      `${String(labelH).padStart(2, "0")}:00`,
-    );
+    const label = `${String(labelH).padStart(2, "0")}:00`;
+    hourMarks.push({
+      label,
+      pixel: timeToPixel(label, startHour, endHour, barWidth),
+    });
     h++;
   }
 
   return (
     <div className="time-bar">
-      <div className="time-bar-labels">
-        {hourLabels.map((label) => (
-          <span key={label}>{label}</span>
+      <div className="time-bar-labels" style={{ width: barWidth, maxWidth: "100%" }}>
+        {hourMarks.map(({ label, pixel }) => (
+          <span
+            key={label}
+            className="time-bar-label-item"
+            style={{ left: pixel }}
+          >
+            {label}
+          </span>
         ))}
       </div>
 
@@ -138,14 +146,19 @@ export function TimeBar({
         onMouseLeave={handleMouseLeave}
         style={{ width: barWidth, maxWidth: "100%" }}
       >
+        {hourMarks.map(({ label, pixel }) => (
+          <div
+            key={`line-${label}`}
+            className="time-bar-hour-line"
+            style={{ left: pixel }}
+          />
+        ))}
+
         {slots.map((time, i) => {
           const isSelected = isSlotSelected(selectedSlots, time);
           const isConflict = conflicts.includes(time);
-          const isHourMark = time.endsWith(":00");
 
           let className = "time-bar-slot";
-          if (isHourMark) className += " hour-mark";
-          else className += " half-mark";
           if (isSelected) className += " sel";
           if (isConflict) className += " conflict";
 
@@ -163,11 +176,25 @@ export function TimeBar({
         })}
       </div>
 
+      {hoveredSlot && !conflicts.includes(hoveredSlot) && (
+        <div
+          className="time-bar-hover-tooltip"
+          style={{
+            left:
+              timeToPixel(hoveredSlot, startHour, endHour, barWidth) +
+              slotWidth / 2,
+          }}
+        >
+          {hoveredSlot}
+        </div>
+      )}
+
       {hoveredSlot && conflicts.includes(hoveredSlot) && hoveredEvent && (
         <div
           className="gcal-tooltip"
           style={{
-            left: timeToPixel(hoveredSlot, startHour, endHour, barWidth) +
+            left:
+              timeToPixel(hoveredSlot, startHour, endHour, barWidth) +
               slotWidth / 2,
             top: 48,
           }}

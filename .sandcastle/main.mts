@@ -49,11 +49,9 @@ const hooks = {
   sandbox: { onSandboxReady: [{ command: "npm install --prefer-offline" }] },
 };
 
-// Copy node_modules from host to worktree before each sandbox starts.
-// Avoids a full npm install from scratch; the hook above handles
-// platform-specific binaries and any packages added since the last copy.
-// Note: cp.cmd wrapper installed at ~/bin/cp.cmd for Windows compatibility.
-const copyToWorktree = ["node_modules"];
+// skip copyToWorktree — Docker image has its own node_modules
+// npm install --prefer-offline in hook handles missing platform binaries
+const copyToWorktree = [];
 
 // ---------------------------------------------------------------------------
 // Main loop

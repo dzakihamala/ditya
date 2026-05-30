@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useReducer, useRef } from "react";
+import { useState, useEffect, useCallback, useReducer } from "react";
 import { db } from "@/lib/firebase";
 import { normalizeName, getDeviceInfo, createParticipant, saveParticipantAvailability, saveParticipantDateSlot } from "@/lib/participant";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
@@ -8,6 +8,7 @@ import { TimeSelector } from "./time-selector";
 import { Review } from "./review";
 import { DateChips } from "./date-chips";
 import { formatDateLong } from "@/lib/date-utils";
+import { useToast } from "@/lib/use-toast";
 import {
   createInitialState,
   wizardReducer,
@@ -38,14 +39,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
   const [showNewNameHint, setShowNewNameHint] = useState(false);
   const [saving, setSaving] = useState(false);
   const [modifyShowPicker, setModifyShowPicker] = useState(false);
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const hideToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const showToast = (msg: string) => {
-    if (hideToastRef.current) clearTimeout(hideToastRef.current);
-    setToastMsg(msg);
-    hideToastRef.current = setTimeout(() => setToastMsg(null), 3000);
-  };
+  const { toast, showToast } = useToast();
 
   // Load meeting data
   useEffect(() => {
@@ -714,9 +708,9 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
   return (
     <>
       {content}
-      {toastMsg && (
+      {toast && (
         <div className="toast-wrap">
-          <div className="toast ok">{toastMsg}</div>
+          <div className="toast ok">{toast}</div>
         </div>
       )}
     </>

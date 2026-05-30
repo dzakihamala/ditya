@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGuard } from "@/lib/AuthGuard";
 import { useAuth } from "@/lib/AuthContext";
@@ -155,21 +155,14 @@ function DashboardContent() {
     fetchMeetings();
   }, [fetchMeetings]);
 
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const hideToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const showDashboardToast = (msg: string) => {
-    if (hideToastRef.current) clearTimeout(hideToastRef.current);
-    setToastMsg(msg);
-    hideToastRef.current = setTimeout(() => setToastMsg(null), 3000);
-  };
+  const { toast, showToast } = useToast();
 
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
       await deleteMeeting(db, deleteId);
       setMeetings((prev) => prev.filter((m) => m.id !== deleteId));
-      showDashboardToast("Rapat dihapus.");
+      showToast("Rapat dihapus.");
     } catch {
       // silently handle
     }
@@ -218,9 +211,9 @@ function DashboardContent() {
           onCancel={() => setDeleteId(null)}
         />
       )}
-      {toastMsg && (
+      {toast && (
         <div className="toast-wrap">
-          <div className="toast ok">{toastMsg}</div>
+          <div className="toast ok">{toast}</div>
         </div>
       )}
     </div>

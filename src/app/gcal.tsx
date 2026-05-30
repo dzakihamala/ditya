@@ -104,13 +104,6 @@ export function GCalButton({
         }
       }
 
-      const conflicts = getConflictingSlots(
-        allEvents,
-        dates[0],
-        startHour,
-        endHour,
-      );
-
       // Merge conflicts across all dates (they'll be filtered per-date in the UI)
       const allConflicts = new Set<string>();
       for (const date of dates) {
@@ -134,6 +127,13 @@ export function GCalButton({
 
     if (!CLIENT_ID || !API_KEY) {
       setError("Google Calendar belum dikonfigurasi.");
+      return;
+    }
+
+    if (!window.gapi) {
+      setError(
+        "Google Calendar belum tersedia. Tunggu beberapa saat dan coba lagi.",
+      );
       return;
     }
 
@@ -169,11 +169,22 @@ export function GCalButton({
     });
   }, [fetchEvents]);
 
+  const handleDisconnect = useCallback(() => {
+    // Revoke token if available
+    if (window.gapi?.client) {
+      window.gapi.client.setToken({ access_token: "" });
+    }
+    // Clear conflicts and reset state
+    onConflictsChange([]);
+    setConnected(false);
+    setError(null);
+  }, [onConflictsChange]);
+
   if (!CLIENT_ID) {
     return (
       <div className="ts-gcal-row">
         <span style={{ fontSize: 12, color: "var(--muted)" }}>
-          Google Calendar tidak tersedia (konfigurasi diperlukan).
+          Google Calendar tidak tersedia (konfigurasi diperlukan)
         </span>
       </div>
     );
@@ -198,17 +209,26 @@ export function GCalButton({
           {loading ? "Menghubungkan..." : "Hubungkan Google Calendar"}
         </button>
       ) : (
-        <span className="ts-gcal-connected">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="currentColor"
+        <>
+          <span className="ts-gcal-connected">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 14.17l6.59-6.59L19 9l-8 8z" />
+            </svg>
+            Google Calendar terhubung
+          </span>
+          <button
+            className="btn btn-r ts-gcal-disconnect-btn"
+            onClick={handleDisconnect}
+            style={{ fontSize: 11, padding: "4px 10px" }}
           >
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 14.17l6.59-6.59L19 9l-8 8z" />
-          </svg>
-          Google Calendar terhubung
-        </span>
+            Putuskan
+          </button>
+        </>
       )}
       {error && (
         <span style={{ fontSize: 11, color: "var(--red)" }}>{error}</span>

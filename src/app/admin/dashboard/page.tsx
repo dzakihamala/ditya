@@ -39,10 +39,12 @@ function MeetingCard({
   meeting,
   onDelete,
   onEdit,
+  onAnalyze,
 }: {
   meeting: Meeting;
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
+  onAnalyze: (id: string) => void;
 }) {
   const baseUrl =
     typeof window !== "undefined"
@@ -110,6 +112,12 @@ function MeetingCard({
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
           </svg>
           Salin Link
+        </button>
+        <button
+          className="btn btn-ghost btn-copy"
+          onClick={() => onAnalyze(meeting.id)}
+        >
+          Analisis
         </button>
         <button
           className="btn btn-ghost btn-copy"
@@ -189,6 +197,7 @@ function DashboardContent() {
               meeting={m}
               onDelete={(id) => setDeleteId(id)}
               onEdit={(id) => router.push(`/admin/meetings/${id}`)}
+              onAnalyze={(id) => router.push(`/admin/meetings/${id}/analysis`)}
             />
           ))}
         </div>

@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "sandcastle": "npx tsx .sandcastle/main.mts && powershell -c \"[System.Console]::Beep(800,200); [System.Console]::Beep(1000,200); [System.Console]::Beep(1200,400)\""
+    "sandcastle": "npx tsx .sandcastle/main.mts"
   },
   "dependencies": {
     "firebase": "^11.6.0",

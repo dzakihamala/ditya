@@ -6,6 +6,8 @@ import { normalizeName, getDeviceInfo, createParticipant, saveParticipantAvailab
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { TimeSelector } from "./time-selector";
 import { Review } from "./review";
+import { DateChips } from "./date-chips";
+import { formatDateLong } from "@/lib/date-utils";
 import {
   createInitialState,
   wizardReducer,
@@ -26,6 +28,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
   const [existing, setExisting] = useState<ExistingParticipant | null>(null);
   const [showNewNameHint, setShowNewNameHint] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [modifyShowPicker, setModifyShowPicker] = useState(false);
 
   // Load meeting data
   useEffect(() => {
@@ -131,7 +134,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         JSON.stringify({ id: existing.id, name: existing.displayName }),
       );
       dispatch({
-        type: "NAME_CONFIRMED",
+        type: "START_MODIFY",
         displayName: existing.displayName,
         participantId: existing.id,
         availability: existing.availability ?? {},
@@ -207,6 +210,39 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
 
   const handleEdit = useCallback((date: string) => {
     dispatch({ type: "GO_TO_EDIT", date });
+  }, []);
+
+  const handleModifySelectDate = useCallback((date: string) => {
+    dispatch({ type: "MODIFY_SINGLE_DATE", date });
+  }, []);
+
+  const handleModifyResetAll = useCallback(() => {
+    dispatch({ type: "MODIFY_RESET_ALL" });
+  }, []);
+
+  const handleModifySaveSlot = useCallback(
+    async (date: string, slots: string[]) => {
+      dispatch({ type: "UPDATE_SLOTS", date, slots });
+      if (wizard.participantId) {
+        try {
+          const { saveParticipantDateSlot } = await import("@/lib/participant");
+          await saveParticipantDateSlot(
+            db,
+            meetingId,
+            wizard.participantId,
+            date,
+            slots,
+          );
+        } catch {
+          // Firestore save failed silently
+        }
+      }
+    },
+    [wizard.participantId, meetingId],
+  );
+
+  const handleModifyDone = useCallback(() => {
+    dispatch({ type: "MODIFY_DONE" });
   }, []);
 
   const handleConfirm = useCallback(async () => {
@@ -326,9 +362,124 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
     );
   }
 
+  // ---- MODIFY STEP: Modify flow entry ----
+  if (wizard.step === "modify") {
+    const items = getReviewItems(wizard.availability, wizard.dates);
+    return (
+      <div className="wizard-wrap" style={{ padding: "28px 24px" }}>
+        <div className="card" style={{ maxWidth: 520, padding: "32px" }}>
+          <div className="card-badge">Ubah Jadwal</div>
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 500,
+              marginBottom: 2,
+              color: "var(--text)",
+            }}
+          >
+            Halo, {wizard.displayName}!
+          </h1>
+          <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 20 }}>
+            Ketersediaan Anda saat ini:
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              marginBottom: 24,
+            }}
+          >
+            {items.map((item) => (
+              <div
+                key={item.date}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  padding: "10px 14px",
+                  borderRadius: 8,
+                  border: "1px solid var(--border)",
+                  background:
+                    item.status === "filled"
+                      ? "var(--green-pale)"
+                      : item.status === "skipped"
+                        ? "#fff7e6"
+                        : "#fafafa",
+                }}
+              >
+                <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text)" }}>
+                  {formatDateLong(item.date)}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontFamily: "var(--font-mono)",
+                    color:
+                      item.status === "filled"
+                        ? "var(--green)"
+                        : item.status === "skipped"
+                          ? "#d97706"
+                          : "var(--muted)",
+                  }}
+                >
+                  {item.status === "filled" && item.ranges.length > 0
+                    ? item.ranges.map((r) => `${r.start}–${r.end}`).join(", ")
+                    : item.status === "skipped"
+                      ? "Tidak bisa"
+                      : "Belum diisi"}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <button
+              className="btn btn-p"
+              onClick={() => setModifyShowPicker(true)}
+              style={{ width: "100%" }}
+            >
+              Ubah Hari Tertentu
+            </button>
+            <button
+              className="btn btn-o"
+              onClick={handleModifyResetAll}
+              style={{ width: "100%" }}
+            >
+              Isi Ulang Semua dari Awal
+            </button>
+          </div>
+
+          {modifyShowPicker && (
+            <div style={{ marginTop: 20 }}>
+              <p
+                style={{
+                  fontSize: 13,
+                  color: "var(--muted)",
+                  marginBottom: 10,
+                }}
+              >
+                Pilih tanggal yang ingin diubah:
+              </p>
+              <DateChips
+                dates={wizard.dates}
+                availability={wizard.availability}
+                activeDate={wizard.dates[0]}
+                onDateChange={handleModifySelectDate}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // ---- STEP 3: Select time ----
   if (wizard.step === "select-time" && wizard.dates.length > 0) {
     const activeDate = wizard.dates[wizard.activeDateIndex];
+    const inModifyMode = wizard.isModifyMode;
     return (
       <TimeSelector
         meetingId={meetingId}
@@ -336,12 +487,14 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
         startHour={wizard.startHour}
         endHour={wizard.endHour}
         initialAvailability={wizard.availability}
-        onSave={handleSaveSlot}
+        onSave={inModifyMode ? handleModifySaveSlot : handleSaveSlot}
         onNext={handleNextDate}
         onPrev={handlePrevDate}
         onDateChange={handleDateChange}
         activeDateIndex={wizard.activeDateIndex}
-        onGoToReview={handleGoToReview}
+        onGoToReview={inModifyMode ? undefined : handleGoToReview}
+        modifyDate={inModifyMode ? wizard.dates[wizard.activeDateIndex] : undefined}
+        onModifyDone={inModifyMode ? handleModifyDone : undefined}
       />
     );
   }
@@ -390,10 +543,19 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
           <button
             className="btn btn-o"
             onClick={() =>
-              dispatch({
-                type: "GO_TO_EDIT",
-                date: wizard.dates[0] || "",
-              })
+              dispatch(
+                wizard.isModifyMode
+                  ? {
+                      type: "START_MODIFY",
+                      displayName: wizard.displayName,
+                      participantId: wizard.participantId!,
+                      availability: wizard.availability,
+                    }
+                  : {
+                      type: "GO_TO_EDIT",
+                      date: wizard.dates[0] || "",
+                    },
+              )
             }
             style={{ fontSize: 13 }}
           >

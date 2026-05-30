@@ -62,3 +62,16 @@ export async function saveParticipantAvailability(
     updatedAt: new Date().toISOString(),
   });
 }
+
+export async function saveParticipantDateSlot(
+  db: Firestore,
+  meetingId: string,
+  participantId: string,
+  date: string,
+  slots: string[],
+): Promise<void> {
+  await updateDoc(doc(db, "meetings", meetingId, "participants", participantId), {
+    [`availability.${date}`]: slots,
+    updatedAt: new Date().toISOString(),
+  });
+}

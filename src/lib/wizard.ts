@@ -5,6 +5,7 @@ export type WizardStep =
   | "input"
   | "gcal"
   | "select-time"
+  | "modify"
   | "review"
   | "saved";
 
@@ -21,6 +22,7 @@ export interface WizardState {
   gcalConnected: boolean;
   confirmedAt: string | null;
   meetingTitle: string;
+  isModifyMode: boolean;
 }
 
 export type WizardAction =
@@ -33,6 +35,10 @@ export type WizardAction =
   | { type: "UPDATE_SLOTS"; date: string; slots: string[] }
   | { type: "GO_TO_REVIEW" }
   | { type: "GO_TO_EDIT"; date: string }
+  | { type: "START_MODIFY"; displayName: string; participantId: string; availability: Record<string, string[]> }
+  | { type: "MODIFY_RESET_ALL" }
+  | { type: "MODIFY_SINGLE_DATE"; date: string }
+  | { type: "MODIFY_DONE" }
   | { type: "CONFIRM_SAVE" }
   | { type: "SET_ERROR"; error: string }
   | { type: "CLEAR_ERROR" };
@@ -51,6 +57,7 @@ export function createInitialState(): WizardState {
     gcalConnected: false,
     confirmedAt: null,
     meetingTitle: "",
+    isModifyMode: false,
   };
 }
 
@@ -124,6 +131,40 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         activeDateIndex: idx,
       };
     }
+
+    case "START_MODIFY":
+      return {
+        ...state,
+        step: "modify",
+        displayName: action.displayName,
+        participantId: action.participantId,
+        availability: action.availability,
+        activeDateIndex: 0,
+        error: null,
+        isModifyMode: true,
+      };
+
+    case "MODIFY_RESET_ALL":
+      return {
+        ...state,
+        step: "gcal",
+        availability: {},
+        activeDateIndex: 0,
+        isModifyMode: false,
+      };
+
+    case "MODIFY_SINGLE_DATE": {
+      const idx = state.dates.indexOf(action.date);
+      if (idx < 0) return state;
+      return {
+        ...state,
+        step: "select-time",
+        activeDateIndex: idx,
+      };
+    }
+
+    case "MODIFY_DONE":
+      return { ...state, step: "review" };
 
     case "CONFIRM_SAVE":
       return {

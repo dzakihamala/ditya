@@ -338,6 +338,97 @@ describe("Wizard Engine — state transitions", () => {
     });
   });
 
+  describe("START_MODIFY", () => {
+    it("transitions from input to modify with participant info", () => {
+      const base: WizardState = {
+        ...createInitialState(),
+        step: "input",
+        dates: DATES,
+        meetingTitle: "T",
+      };
+
+      const s = wizardReducer(base, {
+        type: "START_MODIFY",
+        displayName: "Returning User",
+        participantId: "p1",
+        availability: { "2026-06-15": ["08:00"], "2026-06-16": [] },
+      });
+
+      expect(s.step).toBe("modify");
+      expect(s.displayName).toBe("Returning User");
+      expect(s.participantId).toBe("p1");
+      expect(s.availability["2026-06-15"]).toEqual(["08:00"]);
+      expect(s.error).toBeNull();
+    });
+  });
+
+  describe("MODIFY_RESET_ALL", () => {
+    it("clears availability and goes to gcal step", () => {
+      const base: WizardState = {
+        ...createInitialState(),
+        step: "modify",
+        dates: DATES,
+        meetingTitle: "T",
+        availability: { "2026-06-15": ["08:00"], "2026-06-16": [] },
+      };
+
+      const s = wizardReducer(base, { type: "MODIFY_RESET_ALL" });
+
+      expect(s.step).toBe("gcal");
+      expect(s.availability).toEqual({});
+      expect(s.activeDateIndex).toBe(0);
+    });
+  });
+
+  describe("MODIFY_SINGLE_DATE", () => {
+    it("goes to select-time with the chosen date active", () => {
+      const base: WizardState = {
+        ...createInitialState(),
+        step: "modify",
+        dates: DATES,
+        meetingTitle: "T",
+      };
+
+      const s = wizardReducer(base, {
+        type: "MODIFY_SINGLE_DATE",
+        date: "2026-06-17",
+      });
+
+      expect(s.step).toBe("select-time");
+      expect(s.activeDateIndex).toBe(2);
+    });
+
+    it("returns unchanged for unknown date", () => {
+      const base: WizardState = {
+        ...createInitialState(),
+        step: "modify",
+        dates: DATES,
+      };
+
+      const s = wizardReducer(base, {
+        type: "MODIFY_SINGLE_DATE",
+        date: "2026-12-25",
+      });
+
+      expect(s).toBe(base);
+    });
+  });
+
+  describe("MODIFY_DONE", () => {
+    it("returns to review after partial edit", () => {
+      const base: WizardState = {
+        ...createInitialState(),
+        step: "select-time",
+        dates: DATES,
+        availability: { "2026-06-15": ["08:00"] },
+      };
+
+      const s = wizardReducer(base, { type: "MODIFY_DONE" });
+
+      expect(s.step).toBe("review");
+    });
+  });
+
   describe("CONFIRM_SAVE", () => {
     it("transitions to saved and sets confirmedAt timestamp", () => {
       const base: WizardState = {
@@ -592,6 +683,35 @@ describe("Wizard Engine — full wizard flow scenarios", () => {
     expect(s.gcalConnected).toBe(true);
   });
 
+  it("returning participant starts modify flow instead of gcal", () => {
+    let s = createInitialState();
+
+    s = wizardReducer(s, {
+      type: "LOAD_MEETING_OK",
+      meetingTitle: "Rapat",
+      dates: DATES,
+      startHour: 8,
+      endHour: 17,
+    });
+
+    s = wizardReducer(s, {
+      type: "START_MODIFY",
+      displayName: "Returning User",
+      participantId: "existing-id",
+      availability: {
+        "2026-06-15": ["08:00", "09:00"],
+        "2026-06-16": [],
+      },
+    });
+
+    expect(s.step).toBe("modify");
+    expect(s.displayName).toBe("Returning User");
+    expect(s.participantId).toBe("existing-id");
+    expect(s.availability["2026-06-15"]).toEqual(["08:00", "09:00"]);
+    expect(s.availability["2026-06-16"]).toEqual([]);
+    expect(s.error).toBeNull();
+  });
+
   it("duplicate participant restoring data jumps to gcal step", () => {
     let s = createInitialState();
 
@@ -617,5 +737,118 @@ describe("Wizard Engine — full wizard flow scenarios", () => {
     expect(s.availability["2026-06-15"]).toEqual(["08:00", "09:00"]);
     expect(s.availability["2026-06-16"]).toEqual([]);
     expect(s.activeDateIndex).toBe(2); // first pending is Jun 17
+  });
+
+  it("modify single date: partial update does not touch other dates", () => {
+    let s = createInitialState();
+
+    s = wizardReducer(s, {
+      type: "LOAD_MEETING_OK",
+      meetingTitle: "Rapat",
+      dates: DATES,
+      startHour: 8,
+      endHour: 17,
+    });
+
+    s = wizardReducer(s, {
+      type: "START_MODIFY",
+      displayName: "User",
+      participantId: "p1",
+      availability: {
+        "2026-06-15": ["08:00", "08:30"],
+        "2026-06-16": ["09:00"],
+        "2026-06-17": [],
+      },
+    });
+    expect(s.step).toBe("modify");
+
+    // Pick date Jun 16 to modify
+    s = wizardReducer(s, {
+      type: "MODIFY_SINGLE_DATE",
+      date: "2026-06-16",
+    });
+    expect(s.step).toBe("select-time");
+    expect(s.activeDateIndex).toBe(1);
+
+    // Change Jun 16 slots
+    s = wizardReducer(s, {
+      type: "UPDATE_SLOTS",
+      date: "2026-06-16",
+      slots: ["10:00", "10:30"],
+    });
+
+    // Other dates untouched
+    expect(s.availability["2026-06-15"]).toEqual(["08:00", "08:30"]);
+    expect(s.availability["2026-06-16"]).toEqual(["10:00", "10:30"]);
+    expect(s.availability["2026-06-17"]).toEqual([]);
+
+    // Done editing
+    s = wizardReducer(s, { type: "MODIFY_DONE" });
+    expect(s.step).toBe("review");
+
+    // Confirm
+    s = wizardReducer(s, { type: "CONFIRM_SAVE" });
+    expect(s.step).toBe("saved");
+    expect(s.confirmedAt).toBeTruthy();
+  });
+
+  it("modify reset-all: clears and restarts from gcal", () => {
+    let s = createInitialState();
+
+    s = wizardReducer(s, {
+      type: "LOAD_MEETING_OK",
+      meetingTitle: "Rapat",
+      dates: DATES,
+      startHour: 8,
+      endHour: 17,
+    });
+
+    s = wizardReducer(s, {
+      type: "START_MODIFY",
+      displayName: "User",
+      participantId: "p1",
+      availability: {
+        "2026-06-15": ["08:00"],
+        "2026-06-16": ["09:00"],
+        "2026-06-17": [],
+      },
+    });
+
+    // Reset all
+    s = wizardReducer(s, { type: "MODIFY_RESET_ALL" });
+    expect(s.step).toBe("gcal");
+    expect(s.availability).toEqual({});
+
+    // Now go through full wizard again
+    s = wizardReducer(s, { type: "SKIP_GCAL" });
+    expect(s.step).toBe("select-time");
+    expect(s.activeDateIndex).toBe(0);
+
+    // All dates are pending since we cleared
+    expect(s.availability["2026-06-15"]).toBeUndefined();
+  });
+
+  it("Jendela Tampilan: filters display to current admin range without deleting data", () => {
+    // Admin changes dates from [Jun 15, 16, 17] to [Jun 15, 16, 18]
+    // Jun 17 data preserved but hidden; Jun 18 shown as pending
+    const oldDates = ["2026-06-15", "2026-06-16", "2026-06-17"];
+    const newDates = ["2026-06-15", "2026-06-16", "2026-06-18"];
+
+    const availability = {
+      "2026-06-15": ["08:00"],
+      "2026-06-16": [],
+      "2026-06-17": ["10:00", "10:30"], // removed from admin range
+    };
+
+    // getReviewItems only shows dates in the current dates array
+    const items = getReviewItems(availability, newDates);
+
+    expect(items).toHaveLength(3);
+    expect(items[0]).toMatchObject({ date: "2026-06-15", status: "filled" });
+    expect(items[1]).toMatchObject({ date: "2026-06-16", status: "skipped" });
+    expect(items[2]).toMatchObject({ date: "2026-06-18", status: "pending" });
+
+    // Jun 17 data is preserved in availability but not shown in review
+    expect(availability["2026-06-17"]).toEqual(["10:00", "10:30"]);
   });
 });

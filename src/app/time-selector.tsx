@@ -20,6 +20,8 @@ interface TimeSelectorProps {
   activeDateIndex?: number;
   onDateChange?: (date: string) => void;
   onGoToReview?: () => void;
+  modifyDate?: string;
+  onModifyDone?: () => void;
 }
 
 export function TimeSelector({
@@ -33,6 +35,8 @@ export function TimeSelector({
   activeDateIndex: controlledIndex,
   onDateChange: controlledDateChange,
   onGoToReview,
+  modifyDate,
+  onModifyDone,
 }: TimeSelectorProps) {
   const [availability, setAvailability] = useState<
     Record<string, string[]>
@@ -144,12 +148,14 @@ export function TimeSelector({
           {formattedDate}
         </p>
 
-        <DateChips
-          dates={dates}
-          availability={availability}
-          activeDate={activeDate}
-          onDateChange={handleDateChipClick}
-        />
+        {!modifyDate && (
+          <DateChips
+            dates={dates}
+            availability={availability}
+            activeDate={activeDate}
+            onDateChange={handleDateChipClick}
+          />
+        )}
 
         <GCalButton
           dates={dates}
@@ -195,27 +201,39 @@ export function TimeSelector({
           </button>
         </div>
 
-        <div className="ts-nav-row">
-          <button
-            className="btn btn-o"
-            onClick={handlePrev}
-            disabled={isFirstDate}
-          >
-            ← Sebelumnya
-          </button>
-          {isLastDate ? (
+        {modifyDate ? (
+          <div style={{ marginTop: 24 }}>
             <button
               className="btn btn-p"
-              onClick={onGoToReview ?? onNext}
+              onClick={onModifyDone}
+              style={{ width: "100%" }}
             >
-              Review →
+              Simpan & Kembali ke Review
             </button>
-          ) : (
-            <button className="btn btn-p" onClick={handleNext}>
-              Lanjut →
+          </div>
+        ) : (
+          <div className="ts-nav-row">
+            <button
+              className="btn btn-o"
+              onClick={handlePrev}
+              disabled={isFirstDate}
+            >
+              ← Sebelumnya
             </button>
-          )}
-        </div>
+            {isLastDate ? (
+              <button
+                className="btn btn-p"
+                onClick={onGoToReview ?? onNext}
+              >
+                Review →
+              </button>
+            ) : (
+              <button className="btn btn-p" onClick={handleNext}>
+                Lanjut →
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -108,6 +108,25 @@ function blockPreviewHeight(startTime: string, endTime: string, startHour: numbe
   return (Math.max(si, ei) - Math.min(si, ei) + 1) * CELL_HEIGHT - BLOCK_PAD * 2;
 }
 
+function isBlockDragging(
+  renderDrag: DragState | null,
+  block: { date: string; startTime: string; endTime: string },
+): boolean {
+  if (!renderDrag || renderDrag.type === "create") return false;
+  if (renderDrag.type === "move") {
+    return (
+      block.date === renderDrag.origDate &&
+      block.startTime === renderDrag.origStart &&
+      block.endTime === renderDrag.blockEnd
+    );
+  }
+  return (
+    block.date === renderDrag.date &&
+    block.startTime === renderDrag.blockStart &&
+    block.endTime === renderDrag.blockEnd
+  );
+}
+
 export function TimeGrid({
   dates,
   startHour,
@@ -233,12 +252,11 @@ export function TimeGrid({
       return;
     }
     if (!dragMovedRef.current && ds.type !== "create") {
-      // Tap on existing block — show delete confirmation
-      setDeleteTarget({
-        date: ds.type === "move" ? ds.origDate : ds.date,
-        startTime: ds.type === "move" ? ds.origStart : ds.blockStart,
-        endTime: ds.blockEnd,
-      });
+      if (ds.type === "move") {
+        setDeleteTarget({ date: ds.origDate, startTime: ds.origStart, endTime: ds.blockEnd });
+      } else {
+        setDeleteTarget({ date: ds.date, startTime: ds.blockStart, endTime: ds.blockEnd });
+      }
       setDrag(null);
       return;
     }
@@ -499,21 +517,11 @@ export function TimeGrid({
                   endHour,
                 );
                 const hasConflict = blockSlots.some((s) => dateConflicts.includes(s));
-                const isDragging =
-                  renderDrag &&
-                  renderDrag.type !== "create" &&
-                  ((renderDrag.type === "move" &&
-                    b.date === renderDrag.origDate &&
-                    b.startTime === renderDrag.origStart &&
-                    b.endTime === renderDrag.blockEnd) ||
-                   (renderDrag.type === "resize" &&
-                    b.date === renderDrag.date &&
-                    b.startTime === renderDrag.blockStart &&
-                    b.endTime === renderDrag.blockEnd));
+                const dragging = isBlockDragging(renderDrag, b);
                 return (
                   <div
                     key={`block-${i}`}
-                    className={`tg-block${hasConflict ? " has-conflict" : ""}${isDragging ? " tg-block-dragging" : ""}`}
+                    className={`tg-block${hasConflict ? " has-conflict" : ""}${dragging ? " tg-block-dragging" : ""}`}
                     style={{
                       left: colIdx * COL_WIDTH + BLOCK_PAD,
                       top: topIdx * CELL_HEIGHT + BLOCK_PAD,

@@ -193,7 +193,7 @@ export interface GCalEvent {
   summary?: string;
 }
 
-function parseGCalInstant(iso: string): Date {
+export function parseGCalInstant(iso: string): Date {
   if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
     return new Date(iso + "T00:00:00");
   }
@@ -215,10 +215,7 @@ export function slotsInTimeRange(
   });
 }
 
-export interface ConflictBlock {
-  date: string;
-  startTime: string;
-  endTime: string;
+export interface ConflictBlock extends TimeBlock {
   summary?: string;
 }
 

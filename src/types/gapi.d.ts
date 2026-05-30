@@ -21,6 +21,7 @@ declare global {
       load: (api: string, callback: () => void) => void;
       client: {
         init: (config: Record<string, string>) => Promise<void>;
+        load: (api: string, version: string) => Promise<void>;
         calendar: {
           events: {
             list: (params: Record<string, string | boolean>) => Promise<{

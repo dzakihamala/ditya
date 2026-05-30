@@ -100,6 +100,8 @@ export function GCalButton({
       }
 
       onConflictsChange(getConflictsByDate(allEvents, dates, startHour, endHour));
+      setConnected(true);
+      setLoading(false);
     },
     [dates, startHour, endHour, onConflictsChange, onEventsFetched],
   );

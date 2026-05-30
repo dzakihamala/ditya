@@ -35,6 +35,37 @@ describe("Wizard Engine — state transitions", () => {
       expect(s.endHour).toBe(17);
       expect(s.error).toBeNull();
     });
+
+    it("does not reset wizard step after the user has moved past loading", () => {
+      let s = wizardReducer(createInitialState(), {
+        type: "LOAD_MEETING_OK",
+        meetingTitle: "First",
+        dates: DATES,
+        startHour: 8,
+        endHour: 17,
+      });
+
+      s = wizardReducer(s, {
+        type: "NAME_CONFIRMED",
+        displayName: "Alice",
+        participantId: "p1",
+      });
+      expect(s.step).toBe("select-time");
+
+      s = wizardReducer(s, {
+        type: "LOAD_MEETING_OK",
+        meetingTitle: "Updated Title",
+        dates: DATES,
+        startHour: 9,
+        endHour: 18,
+      });
+
+      expect(s.step).toBe("select-time");
+      expect(s.meetingTitle).toBe("Updated Title");
+      expect(s.startHour).toBe(9);
+      expect(s.endHour).toBe(18);
+      expect(s.participantId).toBe("p1");
+    });
   });
 
   describe("LOAD_MEETING_FAIL", () => {
@@ -49,7 +80,7 @@ describe("Wizard Engine — state transitions", () => {
   });
 
   describe("NAME_CONFIRMED", () => {
-    it("transitions to gcal step with participant info", () => {
+    it("transitions to select-time with participant info", () => {
       const base = wizardReducer(createInitialState(), {
         type: "LOAD_MEETING_OK",
         meetingTitle: "Test",
@@ -64,7 +95,7 @@ describe("Wizard Engine — state transitions", () => {
         participantId: "abc123",
       });
 
-      expect(s.step).toBe("gcal");
+      expect(s.step).toBe("select-time");
       expect(s.displayName).toBe("Alice");
       expect(s.participantId).toBe("abc123");
       expect(s.activeDateIndex).toBe(0);
@@ -675,9 +706,6 @@ describe("Wizard Engine — full wizard flow scenarios", () => {
       displayName: "Alice",
       participantId: "p1",
     });
-    expect(s.step).toBe("gcal");
-
-    s = wizardReducer(s, { type: "SKIP_GCAL" });
     expect(s.step).toBe("select-time");
     expect(s.activeDateIndex).toBe(0);
 
@@ -794,7 +822,7 @@ describe("Wizard Engine — full wizard flow scenarios", () => {
     expect(s.error).toBeNull();
   });
 
-  it("duplicate participant restoring data jumps to gcal step", () => {
+  it("duplicate participant restoring data jumps to select-time", () => {
     let s = createInitialState();
 
     s = wizardReducer(s, {
@@ -815,7 +843,7 @@ describe("Wizard Engine — full wizard flow scenarios", () => {
       },
     });
 
-    expect(s.step).toBe("gcal");
+    expect(s.step).toBe("select-time");
     expect(s.availability["2026-06-15"]).toEqual(["08:00", "09:00"]);
     expect(s.availability["2026-06-16"]).toEqual([]);
     expect(s.activeDateIndex).toBe(2); // first pending is Jun 17

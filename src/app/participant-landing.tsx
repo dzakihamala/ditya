@@ -41,13 +41,17 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
   const [showNewNameHint, setShowNewNameHint] = useState(false);
   const [saving, setSaving] = useState(false);
   const [modifyShowPicker, setModifyShowPicker] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
   const { toast, showToast } = useToast();
 
   // Load meeting data
   useEffect(() => {
+    let cancelled = false;
+
     const fetchMeeting = async () => {
       try {
         const snap = await getDoc(doc(db, "meetings", meetingId));
+        if (cancelled) return;
         if (!snap.exists()) {
           dispatch({
             type: "LOAD_MEETING_FAIL",
@@ -64,6 +68,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
           endHour: data.endHour ?? 17,
         });
       } catch {
+        if (cancelled) return;
         dispatch({
           type: "LOAD_MEETING_FAIL",
           error: "Gagal memuat data rapat. Periksa koneksi Anda.",
@@ -71,6 +76,10 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
       }
     };
     fetchMeeting();
+
+    return () => {
+      cancelled = true;
+    };
   }, [meetingId]);
 
   const checkDuplicate = useCallback(
@@ -78,7 +87,8 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
       const trimmed = inputName.trim();
       if (!trimmed) return;
 
-      dispatch({ type: "SET_ERROR", error: "checking" });
+      setIsChecking(true);
+      dispatch({ type: "CLEAR_ERROR" });
 
       try {
         const q = query(
@@ -97,7 +107,6 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
             createdAt: data.createdAt ?? "",
             availability: data.availability ?? {},
           });
-          dispatch({ type: "CLEAR_ERROR" });
         } else {
           await startNewParticipant(trimmed);
         }
@@ -106,6 +115,8 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
           type: "SET_ERROR",
           error: "Gagal memeriksa data. Coba lagi.",
         });
+      } finally {
+        setIsChecking(false);
       }
     },
     [meetingId],
@@ -307,15 +318,13 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
 
   // ---- RENDER ----
 
-  const checking = wizard.error === "checking";
-
   const toastNode = toast ? (
     <div className="toast-wrap">
       <div className="toast ok">{toast}</div>
     </div>
   ) : null;
 
-  if (wizard.error && wizard.step === "loading" && !checking) {
+  if (wizard.error && wizard.step === "loading") {
     return (
       <>
         <div className="wizard-wrap">
@@ -649,6 +658,30 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
     );
   }
 
+  if (wizard.step !== "input") {
+    return (
+      <>
+        <div className="wizard-wrap">
+          <div className="card" style={{ maxWidth: 440, textAlign: "center" }}>
+            <div className="card-badge" style={{ color: "var(--red)" }}>
+              Error
+            </div>
+            <p style={{ fontSize: 14, marginBottom: 20 }}>
+              Terjadi kesalahan pada alur wizard. Muat ulang halaman untuk melanjutkan.
+            </p>
+            <button
+              className="btn btn-o"
+              onClick={() => window.location.reload()}
+            >
+              Muat ulang
+            </button>
+          </div>
+        </div>
+        {toastNode}
+      </>
+    );
+  }
+
   // ---- STEP 1: Name input ----
   return (
     <>
@@ -669,7 +702,14 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
             Silakan masukkan nama Anda untuk melanjutkan.
           </p>
 
-          {!existing ? (
+          {isChecking ? (
+            <div style={{ textAlign: "center", padding: "20px 0" }}>
+              <div className="spinner" style={{ margin: "0 auto 12px" }} />
+              <p style={{ fontSize: 13, color: "var(--muted)" }}>
+                Memeriksa data...
+              </p>
+            </div>
+          ) : !existing ? (
                 <form onSubmit={handleSubmit}>
                   <label className="form-label">Nama Anda</label>
                   <input
@@ -681,7 +721,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
                     autoFocus
                     required
                   />
-                  {wizard.error && wizard.error !== "checking" && (
+                  {wizard.error && (
                     <div
                       className="err-box"
                       style={{ marginTop: 12, marginBottom: 0 }}
@@ -693,7 +733,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
                     <button
                       className="btn btn-p"
                       type="submit"
-                      disabled={!name.trim() || checking}
+                      disabled={!name.trim() || isChecking}
                       style={{ width: "100%" }}
                     >
                       Lanjutkan
@@ -762,16 +802,7 @@ export function ParticipantLanding({ meetingId }: { meetingId: string }) {
                 </div>
               )}
 
-          {checking && (
-            <div style={{ textAlign: "center", padding: "20px 0" }}>
-              <div className="spinner" style={{ margin: "0 auto 12px" }} />
-              <p style={{ fontSize: 13, color: "var(--muted)" }}>
-                Memeriksa data...
-              </p>
-            </div>
-          )}
-
-          {!existing && showNewNameHint && !checking && (
+          {!existing && showNewNameHint && !isChecking && (
             <div
               className="err-box"
               style={{ marginTop: 12, marginBottom: 0 }}

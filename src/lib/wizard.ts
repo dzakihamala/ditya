@@ -73,12 +73,12 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
     case "LOAD_MEETING_OK":
       return {
         ...state,
-        step: "input",
+        step: state.step === "loading" ? "input" : state.step,
         meetingTitle: action.meetingTitle,
         dates: action.dates,
         startHour: action.startHour,
         endHour: action.endHour,
-        error: null,
+        error: state.step === "loading" ? null : state.error,
       };
 
     case "LOAD_MEETING_FAIL":
@@ -91,7 +91,7 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
     case "NAME_CONFIRMED":
       return {
         ...state,
-        step: "gcal",
+        step: "select-time",
         displayName: action.displayName,
         participantId: action.participantId,
         availability: action.availability ?? {},

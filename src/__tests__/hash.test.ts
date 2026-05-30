@@ -5,7 +5,7 @@ describe("hashPassword", () => {
   it("returns a 64-char hex string", async () => {
     const result = await hashPassword("test123");
     expect(result).toHaveLength(64);
-    expect(/^[a-f0-9]{64}$/.test(result)).toBe(true);
+    expect(result).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it("is deterministic", async () => {

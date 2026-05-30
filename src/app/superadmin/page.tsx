@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { hashPassword } from "@/lib/hash";
@@ -80,7 +80,7 @@ export default function SuperAdminPage() {
     e.preventDefault();
     if (!newUser || !newPass) return;
 
-    if (admins.some((a) => a.u.toLowerCase() === newUser.toLowerCase())) {
+    if (admins.some((a) => a.u.toLowerCase() === newUser.trim().toLowerCase())) {
       showToast("Username sudah ada!", "err");
       return;
     }
@@ -199,8 +199,8 @@ export default function SuperAdminPage() {
             {admins.length === 0 ? (
               <div className="admin-empty">Belum ada admin. Buat di bawah.</div>
             ) : (
-              admins.map((a, i) => (
-                <div key={i} className="admin-item">
+              admins.map((a) => (
+                <div key={a.u} className="admin-item">
                   <div>
                     <div className="admin-name">{a.u}</div>
                     <div className="admin-pass">
